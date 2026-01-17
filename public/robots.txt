@@ -1,0 +1,11 @@
+# robots.txt for Signal Sense Hunter
+# https://signalsense.trade
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://signalsense.trade/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 10
