@@ -1093,17 +1093,25 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 6px;
+      gap: 8px;
+    }
+
+    .pick-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .pick-sparkline {
-      height: 30px;
-      margin-bottom: 6px;
+      width: 70px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.3);
       border-radius: 4px;
       overflow: hidden;
+      flex-shrink: 0;
     }
 
     .pick-sparkline .sparkline {
@@ -3585,34 +3593,42 @@
       div.className = 'pick-item';
       div.onclick = function() { openBinance(pick.symbol); };
 
-      // Header with symbol and score
+      // Header with symbol, sparkline and score
       const header = document.createElement('div');
       header.className = 'pick-header';
 
+      // Left side: symbol
       const symbol = document.createElement('span');
       symbol.className = 'pick-symbol ' + pick.direction.toLowerCase();
       symbol.textContent = pick.symbol;
 
-      const score = document.createElement('span');
-      score.className = 'pick-score';
-      score.textContent = pick.score + ' pts';
+      // Right side container: sparkline + score
+      const headerRight = document.createElement('div');
+      headerRight.className = 'pick-header-left';
 
-      header.appendChild(symbol);
-      header.appendChild(score);
-
-      // Sparkline container
+      // Sparkline container (small, in header)
       const sparklineContainer = document.createElement('div');
       sparklineContainer.className = 'pick-sparkline';
 
       // Fetch and add sparkline asynchronously
       fetchPriceHistory(pick.symbol).then(history => {
         if (history && history.length > 0) {
-          const sparkline = createSparkline(history, 120, 30);
+          const sparkline = createSparkline(history, 70, 24);
           if (sparkline) {
             sparklineContainer.appendChild(sparkline);
           }
         }
       });
+
+      const score = document.createElement('span');
+      score.className = 'pick-score';
+      score.textContent = pick.score + ' pts';
+
+      headerRight.appendChild(sparklineContainer);
+      headerRight.appendChild(score);
+
+      header.appendChild(symbol);
+      header.appendChild(headerRight);
 
       // Funding info
       const funding = document.createElement('div');
@@ -3689,7 +3705,6 @@
 
       // Build item
       div.appendChild(header);
-      div.appendChild(sparklineContainer);
       div.appendChild(funding);
       div.appendChild(meta);
       div.appendChild(levels);
