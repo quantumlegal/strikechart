@@ -1,13 +1,55 @@
+version: '3.8'
+
 services:
+  # Python ML Service
+  ml-service:
+    build: ./ml-service
+    container_name: signalsensehunter-ml
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - ml-models:/app/models  # Persist trained models
+    environment:
+      - ML_HOST=0.0.0.0
+      - ML_PORT=8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - signalnet
+
+  # Node.js Main Application
   signalsensehunter:
     build: .
     container_name: signalsensehunter-app
     restart: unless-stopped
     ports:
       - "3001:3001"
+    volumes:
+      - app-data:/app/data  # Persist SQLite database
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - ML_SERVICE_URL=http://ml-service:8001
+      - ML_ENABLED=true
+    depends_on:
+      ml-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/api/status"]
       interval: 30s
@@ -25,3 +67,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - signalnet
+
+volumes:
+  ml-models:
+    driver: local
+  app-data:
+    driver: local
+
+networks:
+  signalnet:
+    driver: bridge
