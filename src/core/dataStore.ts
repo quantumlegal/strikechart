@@ -65,6 +65,17 @@ export class DataStore {
     data.priceHistory = this.trimHistory(data.priceHistory, velocityWindow);
     data.volumeHistory = this.trimHistory(data.volumeHistory, volumeWindow);
 
+    // Enforce hard limits on history length to prevent memory growth
+    const maxPriceHistory = config.memory?.maxPriceHistory || 500;
+    const maxVolumeHistory = config.memory?.maxVolumeHistory || 200;
+
+    if (data.priceHistory.length > maxPriceHistory) {
+      data.priceHistory = data.priceHistory.slice(-maxPriceHistory);
+    }
+    if (data.volumeHistory.length > maxVolumeHistory) {
+      data.volumeHistory = data.volumeHistory.slice(-maxVolumeHistory);
+    }
+
     // After 1 hour, no longer considered "new"
     if (data.isNew && now - data.firstSeen > 60 * 60 * 1000) {
       data.isNew = false;

@@ -183,12 +183,14 @@ export class WebServer {
 
   private setupSocketIO(): void {
     this.io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id);
+      if (config.logging.verbose) {
+        console.log('Client connected:', socket.id);
+      }
       this.emitUpdate();
 
       // Handle filter updates from client
-      socket.on('setFilter', (config) => {
-        this.filterManager.setConfig(config);
+      socket.on('setFilter', (filterConfig) => {
+        this.filterManager.setConfig(filterConfig);
         this.emitUpdate();
       });
 
@@ -203,7 +205,9 @@ export class WebServer {
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        if (config.logging.verbose) {
+          console.log('Client disconnected:', socket.id);
+        }
       });
     });
   }
