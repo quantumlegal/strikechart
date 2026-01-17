@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StrikeChart - Binance Futures Volatility Hunter</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0e17;
+      color: #e1e5eb;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo h1 {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4aa 0%, #00a8cc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 13px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      background: #161b22;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border-bottom: 1px solid #21262d;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-label {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .filter-select, .filter-input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e1e5eb;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .filter-btn {
+      background: #238636;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: #2ea043;
+    }
+
+    .filter-btn.preset {
+      background: #21262d;
+    }
+
+    .filter-btn.preset:hover {
+      background: #30363d;
+    }
+
+    .filter-btn.preset.active {
+      background: #1f6feb;
+    }
+
+    /* Main Grid Layout */
+    .main-container {
+      padding: 15px;
+      display: grid;
+      gap: 15px;
+    }
+
+    /* Smart Signals Section - Top Priority */
+    .smart-signals-section {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    /* Regular Panels Grid */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    /* Panel Styles */
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 15px;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-badge {
+      background: #30363d;
+      color: #8b949e;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .panel-content {
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* Smart Signal Panel - Special Styling */
+    .panel.smart-long {
+      border-color: #238636;
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+    }
+
+    .panel.smart-long .panel-header {
+      background: rgba(35, 134, 54, 0.1);
+    }
+
+    .panel.smart-short {
+      border-color: #da3633;
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+    }
+
+    .panel.smart-short .panel-header {
+      background: rgba(218, 54, 51, 0.1);
+    }
+
+    .panel.smart-reversal {
+      border-color: #a371f7;
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+    }
+
+    .panel.smart-reversal .panel-header {
+      background: rgba(163, 113, 247, 0.1);
+    }
+
+    /* Item Styles */
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #0d1117;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .item:hover {
+      background: #21262d;
+    }
+
+    .item:last-child {
+      margin-bottom: 0;
+    }
+
+    .item-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .item-symbol {
+      font-weight: 600;
+      font-size: 13px;
+      color: #e1e5eb;
+    }
+
+    .item-meta {
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    .item-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .item-value {
+      font-weight: 600;
+      font-size: 13px;
+      color: #e1e5eb;
+    }
+
+    .item-sub {
+      font-size: 10px;
+      color: #8b949e;
+    }
+
+    /* Smart Signal Item - Special */
+    .smart-item {
+      padding: 10px 12px;
+      background: #0d1117;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #30363d;
+    }
+
+    .smart-item:hover {
+      border-color: #484f58;
+    }
+
+    .smart-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .smart-item-symbol {
+      font-weight: 700;
+      font-size: 14px;
+      color: #e1e5eb;
+    }
+
+    .smart-item-direction {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .smart-item-direction.long {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+
+    .smart-item-direction.short {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .smart-item-confidence {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .confidence-bar {
+      flex: 1;
+      height: 6px;
+      background: #21262d;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .confidence-fill.high {
+      background: linear-gradient(90deg, #238636, #3fb950);
+    }
+
+    .confidence-fill.medium {
+      background: linear-gradient(90deg, #9e6a03, #d29922);
+    }
+
+    .confidence-fill.low {
+      background: linear-gradient(90deg, #da3633, #f85149);
+    }
+
+    .confidence-text {
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 35px;
+      text-align: right;
+    }
+
+    .smart-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .meta-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #21262d;
+      color: #8b949e;
+    }
+
+    .meta-tag.entry-type {
+      background: rgba(56, 139, 253, 0.2);
+      color: #58a6ff;
+    }
+
+    .meta-tag.risk-low {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+
+    .meta-tag.risk-medium {
+      background: rgba(210, 153, 34, 0.2);
+      color: #d29922;
+    }
+
+    .meta-tag.risk-high {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .smart-item-reasons {
+      font-size: 11px;
+      color: #8b949e;
+      line-height: 1.4;
+    }
+
+    /* Reversal Signal Item */
+    .reversal-item {
+      padding: 10px 12px;
+      background: #0d1117;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #30363d;
+    }
+
+    .reversal-item:hover {
+      border-color: #484f58;
+    }
+
+    .reversal-triggers {
+      margin-top: 6px;
+      padding-left: 10px;
+      border-left: 2px solid #30363d;
+    }
+
+    .reversal-trigger {
+      font-size: 11px;
+      color: #8b949e;
+      margin-bottom: 3px;
+    }
+
+    .reversal-levels {
+      display: flex;
+      gap: 15px;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+
+    .reversal-level {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .reversal-level-label {
+      color: #8b949e;
+      font-size: 10px;
+    }
+
+    .reversal-level-value {
+      font-weight: 600;
+    }
+
+    .reversal-level-value.target {
+      color: #3fb950;
+    }
+
+    .reversal-level-value.stop {
+      color: #f85149;
+    }
+
+    /* Section Headers */
+    .section-header {
+      padding: 10px 20px;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e1e5eb;
+    }
+
+    .section-icon {
+      font-size: 16px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: #8b949e;
+      font-size: 12px;
+    }
+
+    /* Directional Coloring */
+    .item-value.positive {
+      color: #3fb950;
+    }
+
+    .item-value.negative {
+      color: #f85149;
+    }
+
+    .item-symbol.positive {
+      color: #3fb950;
+    }
+
+    .item-symbol.negative {
+      color: #f85149;
+    }
+
+    /* Compact View Mode */
+    .compact-view .smart-item {
+      padding: 6px 10px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .compact-view .smart-item-header {
+      margin-bottom: 0;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compact-view .smart-item-confidence {
+      margin-bottom: 0;
+      flex: 1;
+      max-width: 120px;
+    }
+
+    .compact-view .smart-item-meta {
+      margin-bottom: 0;
+      flex: 0 0 auto;
+    }
+
+    .compact-view .smart-item-reasons {
+      display: none;
+    }
+
+    .compact-view .reversal-item {
+      padding: 6px 10px;
+      margin-bottom: 4px;
+    }
+
+    .compact-view .reversal-triggers {
+      display: none;
+    }
+
+    .compact-view .reversal-levels {
+      margin-top: 4px;
+    }
+
+    .compact-view .item {
+      padding: 5px 8px;
+      margin-bottom: 3px;
+    }
+
+    .compact-view .panel-content {
+      max-height: 400px;
+    }
+
+    /* View toggle active state */
+    .view-toggle.active {
+      background: #1f6feb;
+    }
+
+    /* Sentiment Bar */
+    .sentiment-bar {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .sentiment-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .sentiment-gauge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sentiment-label {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .sentiment-value {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .sentiment-value.extreme-fear { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+    .sentiment-value.fear { background: rgba(240, 136, 62, 0.2); color: #f0883e; }
+    .sentiment-value.neutral { background: rgba(139, 148, 158, 0.2); color: #8b949e; }
+    .sentiment-value.greed { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .sentiment-value.extreme-greed { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+
+    .sentiment-meter {
+      width: 150px;
+      height: 8px;
+      background: linear-gradient(90deg, #f85149, #f0883e, #8b949e, #d29922, #3fb950);
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .sentiment-needle {
+      position: absolute;
+      width: 4px;
+      height: 12px;
+      background: #fff;
+      border-radius: 2px;
+      top: -2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    }
+
+    .stats-section {
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .stat-value.positive { color: #3fb950; }
+    .stat-value.negative { color: #f85149; }
+
+    .stat-label {
+      font-size: 10px;
+      color: #8b949e;
+      text-transform: uppercase;
+    }
+
+    /* Notification Toast */
+    .notification-container {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 350px;
+    }
+
+    .notification-toast {
+      background: #1a1f2e;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
+      cursor: pointer;
+    }
+
+    .notification-toast:hover {
+      background: #21262d;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .notification-toast.critical { border-left: 4px solid #f85149; }
+    .notification-toast.high { border-left: 4px solid #d29922; }
+    .notification-toast.medium { border-left: 4px solid #58a6ff; }
+    .notification-toast.low { border-left: 4px solid #8b949e; }
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .notification-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e1e5eb;
+    }
+
+    .notification-direction {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .notification-direction.long { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+    .notification-direction.short { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+
+    .notification-message {
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    /* Entry Signal Item */
+    .entry-item {
+      padding: 8px 10px;
+      background: #0d1117;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    .entry-item:hover {
+      background: #21262d;
+    }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .entry-symbol {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .entry-type {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(56, 139, 253, 0.2);
+      color: #58a6ff;
+    }
+
+    .entry-levels {
+      display: flex;
+      gap: 12px;
+      font-size: 10px;
+    }
+
+    .entry-level {
+      display: flex;
+      gap: 4px;
+    }
+
+    .entry-level-label { color: #8b949e; }
+    .entry-level-value.entry { color: #e1e5eb; }
+    .entry-level-value.sl { color: #f85149; }
+    .entry-level-value.tp { color: #3fb950; }
+
+    .entry-rr {
+      font-size: 11px;
+      color: #58a6ff;
+      margin-top: 4px;
+    }
+
+    /* Top Picks Section */
+    .top-picks-section {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border: 2px solid #d29922;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .top-picks-header {
+      background: linear-gradient(90deg, rgba(210, 153, 34, 0.2), transparent);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .top-picks-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #d29922;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-picks-subtitle {
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    .top-picks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      padding: 15px;
+    }
+
+    .picks-column {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .picks-column.long {
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .picks-column.short {
+      border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+
+    .picks-column-header {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .picks-column.long .picks-column-header {
+      background: rgba(63, 185, 80, 0.15);
+      color: #3fb950;
+    }
+
+    .picks-column.short .picks-column-header {
+      background: rgba(248, 81, 73, 0.15);
+      color: #f85149;
+    }
+
+    .pick-item {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #30363d;
+    }
+
+    .pick-item:hover {
+      border-color: #d29922;
+      transform: translateX(2px);
+    }
+
+    .pick-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .pick-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .pick-symbol {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .pick-symbol.long { color: #3fb950; }
+    .pick-symbol.short { color: #f85149; }
+
+    .pick-score {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(210, 153, 34, 0.2);
+      color: #d29922;
+    }
+
+    .pick-funding {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    .pick-funding-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .pick-funding-badge.earn {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+
+    .pick-funding-badge.pay {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .pick-funding-rate {
+      color: #8b949e;
+    }
+
+    .pick-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .pick-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #21262d;
+      color: #8b949e;
+    }
+
+    .pick-tag.momentum-strong { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+    .pick-tag.momentum-moderate { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .pick-tag.urgency-now { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+    .pick-tag.urgency-wait { background: rgba(56, 139, 253, 0.2); color: #58a6ff; }
+
+    .pick-levels {
+      display: flex;
+      gap: 12px;
+      font-size: 10px;
+      padding-top: 6px;
+      border-top: 1px solid #21262d;
+    }
+
+    .pick-level {
+      display: flex;
+      gap: 4px;
+    }
+
+    .pick-level-label { color: #8b949e; }
+    .pick-level-value.sl { color: #f85149; }
+    .pick-level-value.tp { color: #3fb950; }
+    .pick-level-value.lev { color: #58a6ff; }
+
+    .pick-reasons {
+      font-size: 10px;
+      color: #8b949e;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Compact mode adjustments for picks */
+    .compact-view .pick-item {
+      padding: 6px 10px;
+      margin-bottom: 4px;
+    }
+
+    .compact-view .pick-reasons {
+      display: none;
+    }
+
+    .compact-view .pick-meta {
+      margin-bottom: 4px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    /* Responsive */
+    @media (max-width: 1600px) {
+      .smart-signals-section {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .panels-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .smart-signals-section {
+        grid-template-columns: 1fr;
+      }
+      .panels-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .panels-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <h1>STRIKECHART</h1>
+      <span style="color: #8b949e; font-size: 12px;">Binance Futures Volatility Hunter</span>
+    </div>
+    <div class="status-bar">
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+      <div>Symbols: <strong id="symbolCount">0</strong></div>
+      <div>Last Update: <span id="lastUpdate">--:--:--</span></div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Min Volume:</span>
+      <select class="filter-select" id="minVolumeFilter">
+        <option value="0" selected>All</option>
+        <option value="1000000">$1M+</option>
+        <option value="10000000">$10M+</option>
+        <option value="50000000">$50M+</option>
+        <option value="100000000">$100M+</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Presets:</span>
+      <button class="filter-btn preset active" data-preset="all">All</button>
+      <button class="filter-btn preset" data-preset="highVolume">High Volume</button>
+      <button class="filter-btn preset" data-preset="bigMovers">Big Movers</button>
+      <button class="filter-btn preset" data-preset="topTier">Top Tier</button>
+    </div>
+    <div class="filter-group" style="margin-left: auto;">
+      <span class="filter-label">View:</span>
+      <button class="filter-btn view-toggle" id="viewToggle" data-view="cards">Compact</button>
+    </div>
+  </div>
+
+  <!-- Sentiment & Stats Bar -->
+  <div class="sentiment-bar">
+    <div class="sentiment-section">
+      <div class="sentiment-gauge">
+        <span class="sentiment-label">Market Sentiment:</span>
+        <span class="sentiment-value neutral" id="sentimentValue">NEUTRAL</span>
+        <div class="sentiment-meter">
+          <div class="sentiment-needle" id="sentimentNeedle" style="left: 50%;"></div>
+        </div>
+        <span class="sentiment-label" id="sentimentScore">50</span>
+      </div>
+    </div>
+    <div class="stats-section">
+      <div class="stat-item">
+        <span class="stat-value positive" id="winRate">--%</span>
+        <span class="stat-label">Win Rate</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="totalSignals">--</span>
+        <span class="stat-label">Signals Today</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value positive" id="bullishCount">--</span>
+        <span class="stat-label">Bullish</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value negative" id="bearishCount">--</span>
+        <span class="stat-label">Bearish</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Container -->
+  <div class="notification-container" id="notificationContainer"></div>
+
+  <main class="main-container">
+    <!-- TOP PICKS TRADE Section - Priority #1 -->
+    <div class="top-picks-section">
+      <div class="top-picks-header">
+        <div>
+          <div class="top-picks-title">
+            <span>🎯</span> TOP PICKS TRADE
+          </div>
+          <div class="top-picks-subtitle">Optimized for scalping & short-term trades with funding advantage</div>
+        </div>
+        <div style="font-size: 11px; color: #8b949e;">
+          Updated every 5s | Funding = 8h cycle
+        </div>
+      </div>
+      <div class="top-picks-grid">
+        <!-- Long Picks Column -->
+        <div class="picks-column long">
+          <div class="picks-column-header">
+            <span>▲ BEST LONGS</span>
+            <span id="topLongCount">0</span>
+          </div>
+          <div id="topLongPicks"></div>
+        </div>
+        <!-- Short Picks Column -->
+        <div class="picks-column short">
+          <div class="picks-column-header">
+            <span>▼ BEST SHORTS</span>
+            <span id="topShortCount">0</span>
+          </div>
+          <div id="topShortPicks"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Smart Signals Section -->
+    <div class="section-header">
+      <span class="section-icon">🧠</span>
+      <span class="section-title">SMART SIGNALS - AI-Powered Trade Detection</span>
+    </div>
+
+    <div class="smart-signals-section">
+      <!-- Top Long Signals -->
+      <div class="panel smart-long">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #3fb950;">▲</span> TOP LONG SIGNALS
+          </div>
+          <span class="panel-badge" id="longCount">0</span>
+        </div>
+        <div class="panel-content" id="smartLongPanel"></div>
+      </div>
+
+      <!-- Top Short Signals -->
+      <div class="panel smart-short">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #f85149;">▼</span> TOP SHORT SIGNALS
+          </div>
+          <span class="panel-badge" id="shortCount">0</span>
+        </div>
+        <div class="panel-content" id="smartShortPanel"></div>
+      </div>
+
+      <!-- Reversal Signals -->
+      <div class="panel smart-reversal">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #a371f7;">↻</span> REVERSAL SIGNALS
+          </div>
+          <span class="panel-badge" id="reversalCount">0</span>
+        </div>
+        <div class="panel-content" id="reversalPanel"></div>
+      </div>
+    </div>
+
+    <!-- Early Entry & Breakout Section -->
+    <div class="smart-signals-section" style="grid-template-columns: repeat(3, 1fr);">
+      <!-- Early Entries -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #58a6ff;">⏱</span> EARLY ENTRIES
+          </div>
+          <span class="panel-badge" id="earlyCount">0</span>
+        </div>
+        <div class="panel-content" id="earlyEntriesPanel"></div>
+      </div>
+
+      <!-- Breakout Candidates -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #d29922;">🚀</span> BREAKOUT CANDIDATES
+          </div>
+          <span class="panel-badge" id="breakoutCount">0</span>
+        </div>
+        <div class="panel-content" id="breakoutPanel"></div>
+      </div>
+
+      <!-- Low Risk Setups -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #3fb950;">✓</span> LOW RISK SETUPS
+          </div>
+          <span class="panel-badge" id="lowRiskCount">0</span>
+        </div>
+        <div class="panel-content" id="lowRiskPanel"></div>
+      </div>
+    </div>
+
+    <!-- Market Data Section -->
+    <div class="section-header">
+      <span class="section-icon">📊</span>
+      <span class="section-title">MARKET DATA</span>
+    </div>
+
+    <div class="panels-grid">
+      <!-- Top Movers -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔥 Top Movers (24H)</div>
+          <span class="panel-badge" id="moversCount">0</span>
+        </div>
+        <div class="panel-content" id="topMoversPanel"></div>
+      </div>
+
+      <!-- Velocity Alerts -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⚡ Velocity Alerts</div>
+          <span class="panel-badge" id="velocityCount">0</span>
+        </div>
+        <div class="panel-content" id="velocityPanel"></div>
+      </div>
+
+      <!-- Volume Spikes -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 Volume Spikes</div>
+          <span class="panel-badge" id="volumeCount">0</span>
+        </div>
+        <div class="panel-content" id="volumePanel"></div>
+      </div>
+
+      <!-- High Conviction -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⭐ High Conviction</div>
+          <span class="panel-badge" id="convictionCount">0</span>
+        </div>
+        <div class="panel-content" id="convictionPanel"></div>
+      </div>
+    </div>
+
+    <!-- Advanced Indicators Section -->
+    <div class="section-header">
+      <span class="section-icon">🎯</span>
+      <span class="section-title">ADVANCED INDICATORS</span>
+    </div>
+
+    <div class="panels-grid">
+      <!-- Funding Rates -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">💰 Extreme Funding</div>
+          <span class="panel-badge" id="fundingCount">0</span>
+        </div>
+        <div class="panel-content" id="fundingPanel"></div>
+      </div>
+
+      <!-- Squeeze Setups -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔧 Squeeze Setups</div>
+          <span class="panel-badge" id="squeezeCount">0</span>
+        </div>
+        <div class="panel-content" id="squeezePanel"></div>
+      </div>
+
+      <!-- Open Interest -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📈 OI Changes</div>
+          <span class="panel-badge" id="oiCount">0</span>
+        </div>
+        <div class="panel-content" id="oiPanel"></div>
+      </div>
+
+      <!-- Multi-Timeframe -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📐 MTF Alignment</div>
+          <span class="panel-badge" id="mtfCount">0</span>
+        </div>
+        <div class="panel-content" id="mtfPanel"></div>
+      </div>
+
+      <!-- RSI Extremes -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📉 RSI Extremes</div>
+          <span class="panel-badge" id="rsiCount">0</span>
+        </div>
+        <div class="panel-content" id="rsiPanel"></div>
+      </div>
+
+      <!-- Divergences -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔀 Divergences</div>
+          <span class="panel-badge" id="divCount">0</span>
+        </div>
+        <div class="panel-content" id="divergencePanel"></div>
+      </div>
+    </div>
+
+    <!-- Advanced Detection Section -->
+    <div class="section-header">
+      <span class="section-icon">🔬</span>
+      <span class="section-title">ADVANCED DETECTION</span>
+    </div>
+
+    <div class="panels-grid">
+      <!-- Liquidation Alerts -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">💥 Liquidation Alerts</div>
+          <span class="panel-badge" id="liqCount">0</span>
+        </div>
+        <div class="panel-content" id="liquidationPanel"></div>
+      </div>
+
+      <!-- Whale Alerts -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🐋 Whale Activity</div>
+          <span class="panel-badge" id="whaleCount">0</span>
+        </div>
+        <div class="panel-content" id="whalePanel"></div>
+      </div>
+
+      <!-- BTC Correlation -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔗 BTC Correlation</div>
+          <span class="panel-badge" id="corrCount">0</span>
+        </div>
+        <div class="panel-content" id="correlationPanel"></div>
+      </div>
+
+      <!-- Pattern Recognition -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 Pattern Detection</div>
+          <span class="panel-badge" id="patternCount">0</span>
+        </div>
+        <div class="panel-content" id="patternPanel"></div>
+      </div>
+    </div>
+
+    <!-- Entry Timing Section -->
+    <div class="section-header">
+      <span class="section-icon">🎯</span>
+      <span class="section-title">SMART ENTRY TIMING</span>
+    </div>
+
+    <div class="panels-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <!-- Entry Signals Long -->
+      <div class="panel smart-long">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #3fb950;">▲</span> Long Entries with R:R
+          </div>
+          <span class="panel-badge" id="entryLongCount">0</span>
+        </div>
+        <div class="panel-content" id="entryLongPanel"></div>
+      </div>
+
+      <!-- Entry Signals Short -->
+      <div class="panel smart-short">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="color: #f85149;">▼</span> Short Entries with R:R
+          </div>
+          <span class="panel-badge" id="entryShortCount">0</span>
+        </div>
+        <div class="panel-content" id="entryShortPanel"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const socket = io();
+
+    // DOM Elements
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const symbolCount = document.getElementById('symbolCount');
+    const lastUpdate = document.getElementById('lastUpdate');
+
+    // Filter elements
+    const minVolumeFilter = document.getElementById('minVolumeFilter');
+    const presetButtons = document.querySelectorAll('.filter-btn.preset');
+
+    // Panel elements
+    const panels = {
+      smartLong: document.getElementById('smartLongPanel'),
+      smartShort: document.getElementById('smartShortPanel'),
+      reversal: document.getElementById('reversalPanel'),
+      earlyEntries: document.getElementById('earlyEntriesPanel'),
+      breakout: document.getElementById('breakoutPanel'),
+      lowRisk: document.getElementById('lowRiskPanel'),
+      topMovers: document.getElementById('topMoversPanel'),
+      velocity: document.getElementById('velocityPanel'),
+      volume: document.getElementById('volumePanel'),
+      conviction: document.getElementById('convictionPanel'),
+      funding: document.getElementById('fundingPanel'),
+      squeeze: document.getElementById('squeezePanel'),
+      oi: document.getElementById('oiPanel'),
+      mtf: document.getElementById('mtfPanel'),
+      rsi: document.getElementById('rsiPanel'),
+      divergence: document.getElementById('divergencePanel'),
+      // New advanced panels
+      liquidation: document.getElementById('liquidationPanel'),
+      whale: document.getElementById('whalePanel'),
+      correlation: document.getElementById('correlationPanel'),
+      pattern: document.getElementById('patternPanel'),
+      entryLong: document.getElementById('entryLongPanel'),
+      entryShort: document.getElementById('entryShortPanel'),
+    };
+
+    // Badge elements
+    const badges = {
+      long: document.getElementById('longCount'),
+      short: document.getElementById('shortCount'),
+      reversal: document.getElementById('reversalCount'),
+      early: document.getElementById('earlyCount'),
+      breakout: document.getElementById('breakoutCount'),
+      lowRisk: document.getElementById('lowRiskCount'),
+      movers: document.getElementById('moversCount'),
+      velocity: document.getElementById('velocityCount'),
+      volume: document.getElementById('volumeCount'),
+      conviction: document.getElementById('convictionCount'),
+      funding: document.getElementById('fundingCount'),
+      squeeze: document.getElementById('squeezeCount'),
+      oi: document.getElementById('oiCount'),
+      mtf: document.getElementById('mtfCount'),
+      rsi: document.getElementById('rsiCount'),
+      div: document.getElementById('divCount'),
+      // New badges
+      liq: document.getElementById('liqCount'),
+      whale: document.getElementById('whaleCount'),
+      corr: document.getElementById('corrCount'),
+      pattern: document.getElementById('patternCount'),
+      entryLong: document.getElementById('entryLongCount'),
+      entryShort: document.getElementById('entryShortCount'),
+    };
+
+    // Sentiment and stats elements
+    const sentimentValue = document.getElementById('sentimentValue');
+    const sentimentNeedle = document.getElementById('sentimentNeedle');
+    const sentimentScore = document.getElementById('sentimentScore');
+    const winRateEl = document.getElementById('winRate');
+    const totalSignalsEl = document.getElementById('totalSignals');
+    const bullishCountEl = document.getElementById('bullishCount');
+    const bearishCountEl = document.getElementById('bearishCount');
+    const notificationContainer = document.getElementById('notificationContainer');
+
+    // Top Picks elements
+    const topLongPicks = document.getElementById('topLongPicks');
+    const topShortPicks = document.getElementById('topShortPicks');
+    const topLongCount = document.getElementById('topLongCount');
+    const topShortCount = document.getElementById('topShortCount');
+
+    // Helper functions
+    function formatNumber(num) {
+      if (num === undefined || num === null || isNaN(num)) return '0.00';
+      if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+      if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+      if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+      return num.toFixed(2);
+    }
+
+    function formatPercent(num) {
+      if (num === undefined || num === null || isNaN(num)) return '0.00%';
+      const sign = num >= 0 ? '+' : '';
+      return sign + num.toFixed(2) + '%';
+    }
+
+    function openBinance(symbol) {
+      window.open('https://www.binance.com/en/futures/' + symbol, '_blank');
+    }
+
+    function getConfidenceClass(confidence) {
+      if (confidence >= 70) return 'high';
+      if (confidence >= 50) return 'medium';
+      return 'low';
+    }
+
+    // Render functions
+    function renderSmartSignal(signal, container) {
+      const div = document.createElement('div');
+      div.className = 'smart-item ' + signal.direction.toLowerCase();
+      div.onclick = () => openBinance(signal.symbol);
+
+      const confClass = getConfidenceClass(signal.confidence);
+      const riskClass = 'risk-' + signal.riskLevel.toLowerCase();
+
+      const header = document.createElement('div');
+      header.className = 'smart-item-header';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'smart-item-symbol';
+      symbolSpan.textContent = signal.symbol;
+
+      const dirSpan = document.createElement('span');
+      dirSpan.className = 'smart-item-direction ' + signal.direction.toLowerCase();
+      dirSpan.textContent = signal.direction;
+
+      header.appendChild(symbolSpan);
+      header.appendChild(dirSpan);
+
+      const confDiv = document.createElement('div');
+      confDiv.className = 'smart-item-confidence';
+
+      const confBar = document.createElement('div');
+      confBar.className = 'confidence-bar';
+      const confFill = document.createElement('div');
+      confFill.className = 'confidence-fill ' + confClass;
+      confFill.style.width = signal.confidence + '%';
+      confBar.appendChild(confFill);
+
+      const confText = document.createElement('span');
+      confText.className = 'confidence-text';
+      confText.textContent = signal.confidence.toFixed(0) + '%';
+
+      confDiv.appendChild(confBar);
+      confDiv.appendChild(confText);
+
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'smart-item-meta';
+
+      const entryTag = document.createElement('span');
+      entryTag.className = 'meta-tag entry-type';
+      entryTag.textContent = signal.entryType;
+
+      const riskTag = document.createElement('span');
+      riskTag.className = 'meta-tag ' + riskClass;
+      riskTag.textContent = signal.riskLevel + ' RISK';
+
+      const priceTag = document.createElement('span');
+      priceTag.className = 'meta-tag';
+      priceTag.textContent = '$' + formatNumber(signal.price);
+
+      metaDiv.appendChild(entryTag);
+      metaDiv.appendChild(riskTag);
+      metaDiv.appendChild(priceTag);
+
+      const reasonsDiv = document.createElement('div');
+      reasonsDiv.className = 'smart-item-reasons';
+      reasonsDiv.textContent = signal.reasoning ? signal.reasoning.slice(0, 2).join(' • ') : '';
+
+      div.appendChild(header);
+      div.appendChild(confDiv);
+      div.appendChild(metaDiv);
+      div.appendChild(reasonsDiv);
+
+      container.appendChild(div);
+    }
+
+    function renderReversalSignal(signal, container) {
+      const div = document.createElement('div');
+      const isBullish = signal.type === 'BULLISH_REVERSAL';
+      div.className = 'reversal-item' + (isBullish ? '' : ' bearish');
+      div.onclick = () => openBinance(signal.symbol);
+
+      const header = document.createElement('div');
+      header.className = 'smart-item-header';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'smart-item-symbol';
+      symbolSpan.textContent = signal.symbol;
+
+      const typeSpan = document.createElement('span');
+      typeSpan.className = 'smart-item-direction';
+      typeSpan.style.background = isBullish ? 'rgba(163, 113, 247, 0.2)' : 'rgba(240, 136, 62, 0.2)';
+      typeSpan.style.color = isBullish ? '#a371f7' : '#f0883e';
+      typeSpan.textContent = (isBullish ? '↑ BULLISH' : '↓ BEARISH') + ' REVERSAL';
+
+      header.appendChild(symbolSpan);
+      header.appendChild(typeSpan);
+
+      const confDiv = document.createElement('div');
+      confDiv.className = 'smart-item-confidence';
+
+      const confBar = document.createElement('div');
+      confBar.className = 'confidence-bar';
+      const confFill = document.createElement('div');
+      confFill.className = 'confidence-fill ' + getConfidenceClass(signal.confidence);
+      confFill.style.width = signal.confidence + '%';
+      confBar.appendChild(confFill);
+
+      const confText = document.createElement('span');
+      confText.className = 'confidence-text';
+      confText.textContent = signal.confidence.toFixed(0) + '%';
+
+      confDiv.appendChild(confBar);
+      confDiv.appendChild(confText);
+
+      const triggersDiv = document.createElement('div');
+      triggersDiv.className = 'reversal-triggers';
+      if (signal.triggers) {
+        signal.triggers.forEach(t => {
+          const triggerDiv = document.createElement('div');
+          triggerDiv.className = 'reversal-trigger';
+          triggerDiv.textContent = '• ' + t;
+          triggersDiv.appendChild(triggerDiv);
+        });
+      }
+
+      const levelsDiv = document.createElement('div');
+      levelsDiv.className = 'reversal-levels';
+
+      const entryLevel = document.createElement('div');
+      entryLevel.className = 'reversal-level';
+      const entryLabel = document.createElement('span');
+      entryLabel.className = 'reversal-level-label';
+      entryLabel.textContent = 'Entry';
+      const entryValue = document.createElement('span');
+      entryValue.className = 'reversal-level-value';
+      entryValue.textContent = '$' + signal.price.toFixed(4);
+      entryLevel.appendChild(entryLabel);
+      entryLevel.appendChild(entryValue);
+
+      const targetLevel = document.createElement('div');
+      targetLevel.className = 'reversal-level';
+      const targetLabel = document.createElement('span');
+      targetLabel.className = 'reversal-level-label';
+      targetLabel.textContent = 'Target';
+      const targetValue = document.createElement('span');
+      targetValue.className = 'reversal-level-value target';
+      targetValue.textContent = '$' + signal.potentialTarget.toFixed(4);
+      targetLevel.appendChild(targetLabel);
+      targetLevel.appendChild(targetValue);
+
+      const stopLevel = document.createElement('div');
+      stopLevel.className = 'reversal-level';
+      const stopLabel = document.createElement('span');
+      stopLabel.className = 'reversal-level-label';
+      stopLabel.textContent = 'Stop';
+      const stopValue = document.createElement('span');
+      stopValue.className = 'reversal-level-value stop';
+      stopValue.textContent = '$' + signal.stopLoss.toFixed(4);
+      stopLevel.appendChild(stopLabel);
+      stopLevel.appendChild(stopValue);
+
+      levelsDiv.appendChild(entryLevel);
+      levelsDiv.appendChild(targetLevel);
+      levelsDiv.appendChild(stopLevel);
+
+      div.appendChild(header);
+      div.appendChild(confDiv);
+      div.appendChild(triggersDiv);
+      div.appendChild(levelsDiv);
+
+      container.appendChild(div);
+    }
+
+    function renderItem(data, container, options = {}) {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.onclick = () => openBinance(data.symbol);
+
+      const value = options.valueField ? data[options.valueField] : data.change24h || 0;
+      const valueText = options.valueFormat ? options.valueFormat(data) : formatPercent(value);
+      const metaText = options.metaFormat ? options.metaFormat(data) : '';
+      const subText = options.subFormat ? options.subFormat(data) : '';
+
+      // Determine direction for coloring
+      const directionValue = options.directionField ? data[options.directionField] : value;
+      const isPositive = directionValue > 0;
+      const isNegative = directionValue < 0;
+      const directionClass = isPositive ? 'positive' : (isNegative ? 'negative' : '');
+
+      const leftDiv = document.createElement('div');
+      leftDiv.className = 'item-left';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'item-symbol' + (options.colorSymbol && directionClass ? ' ' + directionClass : '');
+      symbolSpan.textContent = data.symbol;
+      leftDiv.appendChild(symbolSpan);
+
+      if (metaText) {
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'item-meta';
+        metaSpan.textContent = metaText;
+        leftDiv.appendChild(metaSpan);
+      }
+
+      const rightDiv = document.createElement('div');
+      rightDiv.className = 'item-right';
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'item-value' + (directionClass ? ' ' + directionClass : '');
+      valueSpan.textContent = valueText;
+      rightDiv.appendChild(valueSpan);
+
+      if (subText) {
+        const subSpan = document.createElement('span');
+        subSpan.className = 'item-sub';
+        subSpan.textContent = subText;
+        rightDiv.appendChild(subSpan);
+      }
+
+      div.appendChild(leftDiv);
+      div.appendChild(rightDiv);
+
+      container.appendChild(div);
+    }
+
+    function clearPanel(panel) {
+      while (panel.firstChild) {
+        panel.removeChild(panel.firstChild);
+      }
+    }
+
+    function renderEmptyState(panel, message) {
+      message = message || 'No data available';
+      const div = document.createElement('div');
+      div.className = 'empty-state';
+      div.textContent = message;
+      panel.appendChild(div);
+    }
+
+    // Render entry signal with R:R
+    function renderEntrySignal(signal, container) {
+      const div = document.createElement('div');
+      div.className = 'entry-item';
+      div.onclick = function() { openBinance(signal.symbol); };
+
+      const isLong = signal.direction === 'LONG';
+      const symbolClass = isLong ? 'positive' : 'negative';
+
+      const header = document.createElement('div');
+      header.className = 'entry-header';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'entry-symbol ' + symbolClass;
+      symbolSpan.textContent = signal.symbol;
+
+      const typeSpan = document.createElement('span');
+      typeSpan.className = 'entry-type';
+      typeSpan.textContent = signal.entryType;
+
+      header.appendChild(symbolSpan);
+      header.appendChild(typeSpan);
+
+      const levels = document.createElement('div');
+      levels.className = 'entry-levels';
+
+      var entryLevel = document.createElement('div');
+      entryLevel.className = 'entry-level';
+      entryLevel.innerHTML = '<span class="entry-level-label">Entry:</span><span class="entry-level-value entry">$' + signal.entryPrice.toFixed(4) + '</span>';
+
+      var slLevel = document.createElement('div');
+      slLevel.className = 'entry-level';
+      slLevel.innerHTML = '<span class="entry-level-label">SL:</span><span class="entry-level-value sl">$' + signal.stopLoss.toFixed(4) + '</span>';
+
+      var tpLevel = document.createElement('div');
+      tpLevel.className = 'entry-level';
+      tpLevel.innerHTML = '<span class="entry-level-label">TP1:</span><span class="entry-level-value tp">$' + signal.takeProfit1.toFixed(4) + '</span>';
+
+      levels.appendChild(entryLevel);
+      levels.appendChild(slLevel);
+      levels.appendChild(tpLevel);
+
+      const rrDiv = document.createElement('div');
+      rrDiv.className = 'entry-rr';
+      rrDiv.textContent = 'R:R ' + signal.riskRewardRatio + ' | Conf: ' + signal.confidence.toFixed(0) + '%';
+
+      div.appendChild(header);
+      div.appendChild(levels);
+      div.appendChild(rrDiv);
+
+      container.appendChild(div);
+    }
+
+    // Render notification toast
+    function renderNotification(notification) {
+      const toast = document.createElement('div');
+      toast.className = 'notification-toast ' + notification.priority.toLowerCase();
+      toast.onclick = function() {
+        openBinance(notification.symbol);
+        toast.remove();
+      };
+
+      const header = document.createElement('div');
+      header.className = 'notification-header';
+
+      const title = document.createElement('span');
+      title.className = 'notification-title';
+      title.textContent = notification.title;
+
+      header.appendChild(title);
+
+      if (notification.direction) {
+        const dir = document.createElement('span');
+        dir.className = 'notification-direction ' + notification.direction.toLowerCase();
+        dir.textContent = notification.direction;
+        header.appendChild(dir);
+      }
+
+      const message = document.createElement('div');
+      message.className = 'notification-message';
+      message.textContent = notification.message;
+
+      toast.appendChild(header);
+      toast.appendChild(message);
+
+      notificationContainer.appendChild(toast);
+
+      // Auto-remove after 10 seconds
+      setTimeout(function() {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 10000);
+    }
+
+    // Update sentiment display
+    function updateSentiment(sentiment) {
+      if (!sentiment) return;
+
+      sentimentScore.textContent = sentiment.overallScore;
+      sentimentNeedle.style.left = sentiment.overallScore + '%';
+
+      var sentimentClass = 'neutral';
+      var sentimentText = sentiment.sentiment.replace(/_/g, ' ');
+      if (sentiment.sentiment === 'EXTREME_FEAR') sentimentClass = 'extreme-fear';
+      else if (sentiment.sentiment === 'FEAR') sentimentClass = 'fear';
+      else if (sentiment.sentiment === 'GREED') sentimentClass = 'greed';
+      else if (sentiment.sentiment === 'EXTREME_GREED') sentimentClass = 'extreme-greed';
+
+      sentimentValue.className = 'sentiment-value ' + sentimentClass;
+      sentimentValue.textContent = sentimentText;
+
+      // Update bullish/bearish counts
+      if (sentiment.indicators) {
+        bullishCountEl.textContent = sentiment.indicators.bullishCoins || 0;
+        bearishCountEl.textContent = sentiment.indicators.bearishCoins || 0;
+      }
+    }
+
+    // Update win rate stats
+    function updateWinRateStats(stats) {
+      if (!stats) return;
+
+      if (stats.winRate !== undefined) {
+        winRateEl.textContent = stats.winRate.toFixed(1) + '%';
+        winRateEl.className = 'stat-value ' + (stats.winRate >= 50 ? 'positive' : 'negative');
+      }
+
+      if (stats.totalSignals !== undefined) {
+        totalSignalsEl.textContent = stats.totalSignals;
+      }
+    }
+
+    // Render Top Pick item
+    function renderTopPick(pick, container) {
+      const div = document.createElement('div');
+      div.className = 'pick-item';
+      div.onclick = function() { openBinance(pick.symbol); };
+
+      // Header with symbol and score
+      const header = document.createElement('div');
+      header.className = 'pick-header';
+
+      const symbol = document.createElement('span');
+      symbol.className = 'pick-symbol ' + pick.direction.toLowerCase();
+      symbol.textContent = pick.symbol;
+
+      const score = document.createElement('span');
+      score.className = 'pick-score';
+      score.textContent = pick.score + ' pts';
+
+      header.appendChild(symbol);
+      header.appendChild(score);
+
+      // Funding info
+      const funding = document.createElement('div');
+      funding.className = 'pick-funding';
+
+      const fundingBadge = document.createElement('span');
+      fundingBadge.className = 'pick-funding-badge ' + pick.fundingDirection.toLowerCase();
+      fundingBadge.textContent = pick.fundingDirection === 'EARN' ? '💰 EARN' : '💸 PAY';
+
+      const fundingRate = document.createElement('span');
+      fundingRate.className = 'pick-funding-rate';
+      fundingRate.textContent = pick.estimatedFundingPnl + ' / 8h';
+
+      funding.appendChild(fundingBadge);
+      funding.appendChild(fundingRate);
+
+      // Meta tags
+      const meta = document.createElement('div');
+      meta.className = 'pick-meta';
+
+      const typeTag = document.createElement('span');
+      typeTag.className = 'pick-tag';
+      typeTag.textContent = pick.entryType;
+      meta.appendChild(typeTag);
+
+      if (pick.momentum !== 'WEAK') {
+        const momentumTag = document.createElement('span');
+        momentumTag.className = 'pick-tag momentum-' + pick.momentum.toLowerCase();
+        momentumTag.textContent = pick.momentum + ' momentum';
+        meta.appendChild(momentumTag);
+      }
+
+      if (pick.urgency === 'NOW' || pick.urgency === 'WAIT') {
+        const urgencyTag = document.createElement('span');
+        urgencyTag.className = 'pick-tag urgency-' + pick.urgency.toLowerCase();
+        urgencyTag.textContent = pick.urgency === 'NOW' ? '⚡ NOW' : '⏳ WAIT';
+        meta.appendChild(urgencyTag);
+      }
+
+      const changeTag = document.createElement('span');
+      changeTag.className = 'pick-tag';
+      changeTag.textContent = (pick.change24h >= 0 ? '+' : '') + pick.change24h + '% 24h';
+      meta.appendChild(changeTag);
+
+      // Levels
+      const levels = document.createElement('div');
+      levels.className = 'pick-levels';
+
+      var slLevel = document.createElement('div');
+      slLevel.className = 'pick-level';
+      slLevel.innerHTML = '<span class="pick-level-label">SL:</span><span class="pick-level-value sl">$' + pick.stopLoss.toFixed(4) + '</span>';
+
+      var tpLevel = document.createElement('div');
+      tpLevel.className = 'pick-level';
+      tpLevel.innerHTML = '<span class="pick-level-label">TP:</span><span class="pick-level-value tp">$' + pick.takeProfit.toFixed(4) + '</span>';
+
+      var levLevel = document.createElement('div');
+      levLevel.className = 'pick-level';
+      levLevel.innerHTML = '<span class="pick-level-label">Lev:</span><span class="pick-level-value lev">' + pick.suggestedLeverage + 'x</span>';
+
+      var rrLevel = document.createElement('div');
+      rrLevel.className = 'pick-level';
+      rrLevel.innerHTML = '<span class="pick-level-label">R:R:</span><span class="pick-level-value">' + pick.riskRewardRatio + '</span>';
+
+      levels.appendChild(slLevel);
+      levels.appendChild(tpLevel);
+      levels.appendChild(levLevel);
+      levels.appendChild(rrLevel);
+
+      // Reasons
+      const reasons = document.createElement('div');
+      reasons.className = 'pick-reasons';
+      reasons.textContent = pick.reasons ? pick.reasons.slice(0, 2).join(' • ') : '';
+
+      // Build item
+      div.appendChild(header);
+      div.appendChild(funding);
+      div.appendChild(meta);
+      div.appendChild(levels);
+      div.appendChild(reasons);
+
+      container.appendChild(div);
+    }
+
+    // Render Top Picks
+    function renderTopPicks(data) {
+      if (!data || !data.topPicks) return;
+
+      // Clear containers
+      while (topLongPicks.firstChild) topLongPicks.removeChild(topLongPicks.firstChild);
+      while (topShortPicks.firstChild) topShortPicks.removeChild(topShortPicks.firstChild);
+
+      var longs = data.topPicks.longs || [];
+      var shorts = data.topPicks.shorts || [];
+
+      // Render longs
+      if (longs.length > 0) {
+        longs.forEach(function(pick) { renderTopPick(pick, topLongPicks); });
+        topLongCount.textContent = longs.length;
+      } else {
+        topLongPicks.innerHTML = '<div class="empty-state">No long picks available</div>';
+        topLongCount.textContent = '0';
+      }
+
+      // Render shorts
+      if (shorts.length > 0) {
+        shorts.forEach(function(pick) { renderTopPick(pick, topShortPicks); });
+        topShortCount.textContent = shorts.length;
+      } else {
+        topShortPicks.innerHTML = '<div class="empty-state">No short picks available</div>';
+        topShortCount.textContent = '0';
+      }
+    }
+
+    // Main update handler
+    socket.on('update', function(data) {
+      console.log('Received update:', {
+        topMovers: data.topMovers ? data.topMovers.length : 0,
+        velocityAlerts: data.velocityAlerts ? data.velocityAlerts.length : 0,
+        volumeSpikes: data.volumeSpikes ? data.volumeSpikes.length : 0,
+        smartSignalsLong: data.smartSignalsLong ? data.smartSignalsLong.length : 0,
+        smartSignalsShort: data.smartSignalsShort ? data.smartSignalsShort.length : 0
+      });
+
+      // Update status
+      if (data.status === 'connected') {
+        statusDot.classList.add('connected');
+      } else {
+        statusDot.classList.remove('connected');
+      }
+      statusText.textContent = data.status === 'connected' ? 'Connected' : 'Disconnected';
+      symbolCount.textContent = data.symbolCount;
+      lastUpdate.textContent = new Date(data.timestamp).toLocaleTimeString();
+
+      // Clear all panels
+      Object.values(panels).forEach(clearPanel);
+
+      // Smart Long Signals
+      if (data.smartSignalsLong && data.smartSignalsLong.length > 0) {
+        data.smartSignalsLong.forEach(function(s) { renderSmartSignal(s, panels.smartLong); });
+        badges.long.textContent = data.smartSignalsLong.length;
+      } else {
+        renderEmptyState(panels.smartLong, 'No long signals');
+        badges.long.textContent = '0';
+      }
+
+      // Smart Short Signals
+      if (data.smartSignalsShort && data.smartSignalsShort.length > 0) {
+        data.smartSignalsShort.forEach(function(s) { renderSmartSignal(s, panels.smartShort); });
+        badges.short.textContent = data.smartSignalsShort.length;
+      } else {
+        renderEmptyState(panels.smartShort, 'No short signals');
+        badges.short.textContent = '0';
+      }
+
+      // Reversal Signals
+      if (data.reversalSignals && data.reversalSignals.length > 0) {
+        data.reversalSignals.forEach(function(s) { renderReversalSignal(s, panels.reversal); });
+        badges.reversal.textContent = data.reversalSignals.length;
+      } else {
+        renderEmptyState(panels.reversal, 'No reversal signals');
+        badges.reversal.textContent = '0';
+      }
+
+      // Early Entries
+      if (data.earlyEntries && data.earlyEntries.length > 0) {
+        data.earlyEntries.forEach(function(s) { renderSmartSignal(s, panels.earlyEntries); });
+        badges.early.textContent = data.earlyEntries.length;
+      } else {
+        renderEmptyState(panels.earlyEntries, 'No early entries');
+        badges.early.textContent = '0';
+      }
+
+      // Breakout Candidates
+      if (data.breakoutCandidates && data.breakoutCandidates.length > 0) {
+        data.breakoutCandidates.forEach(function(s) { renderSmartSignal(s, panels.breakout); });
+        badges.breakout.textContent = data.breakoutCandidates.length;
+      } else {
+        renderEmptyState(panels.breakout, 'No breakout candidates');
+        badges.breakout.textContent = '0';
+      }
+
+      // Low Risk Setups
+      if (data.lowRiskSetups && data.lowRiskSetups.length > 0) {
+        data.lowRiskSetups.forEach(function(s) { renderSmartSignal(s, panels.lowRisk); });
+        badges.lowRisk.textContent = data.lowRiskSetups.length;
+      } else {
+        renderEmptyState(panels.lowRisk, 'No low risk setups');
+        badges.lowRisk.textContent = '0';
+      }
+
+      // Top Movers
+      try {
+        if (data.topMovers && data.topMovers.length > 0) {
+          console.log('Rendering topMovers:', data.topMovers[0]);
+          data.topMovers.forEach(function(m) {
+            renderItem(m, panels.topMovers, {
+              valueField: 'change24h',
+              directionField: 'change24h',
+              colorSymbol: true,
+              metaFormat: function(d) { return '$' + formatNumber(d.lastPrice); }
+            });
+          });
+          badges.movers.textContent = data.topMovers.length;
+        } else {
+          renderEmptyState(panels.topMovers);
+          badges.movers.textContent = '0';
+        }
+      } catch(e) {
+        console.error('Error rendering topMovers:', e);
+      }
+
+      // Velocity Alerts
+      if (data.velocityAlerts && data.velocityAlerts.length > 0) {
+        data.velocityAlerts.forEach(function(v) {
+          renderItem(v, panels.velocity, {
+            valueFormat: function(d) { return formatPercent(d.velocity) + '/min'; },
+            valueField: 'velocity',
+            directionField: 'velocity',
+            colorSymbol: true,
+            metaFormat: function(d) { return d.acceleration > 0 ? '↗ Accelerating' : '→ Steady'; }
+          });
+        });
+        badges.velocity.textContent = data.velocityAlerts.length;
+      } else {
+        renderEmptyState(panels.velocity);
+        badges.velocity.textContent = '0';
+      }
+
+      // Volume Spikes
+      if (data.volumeSpikes && data.volumeSpikes.length > 0) {
+        data.volumeSpikes.forEach(function(v) {
+          renderItem(v, panels.volume, {
+            valueFormat: function(d) { return d.multiplier.toFixed(1) + 'x avg'; },
+            valueField: 'multiplier',
+            directionField: 'priceChange',
+            colorSymbol: true,
+            metaFormat: function(d) { return formatPercent(d.priceChange); }
+          });
+        });
+        badges.volume.textContent = data.volumeSpikes.length;
+      } else {
+        renderEmptyState(panels.volume);
+        badges.volume.textContent = '0';
+      }
+
+      // High Conviction
+      if (data.highConviction && data.highConviction.length > 0) {
+        data.highConviction.forEach(function(h) {
+          // Determine direction from direction field or change24h
+          var dirVal = h.direction === 'LONG' ? 1 : (h.direction === 'SHORT' ? -1 : (h.details && h.details.change24h ? h.details.change24h : 0));
+          renderItem(h, panels.conviction, {
+            valueFormat: function(d) { return 'Score: ' + d.score.toFixed(0); },
+            valueField: 'score',
+            directionField: null,
+            colorSymbol: true,
+            metaFormat: function(d) { return d.details && d.details.change24h ? formatPercent(d.details.change24h) : d.direction; }
+          });
+          // Manually apply direction class since we need custom logic
+          var lastItem = panels.conviction.lastChild;
+          if (lastItem) {
+            var sym = lastItem.querySelector('.item-symbol');
+            var val = lastItem.querySelector('.item-value');
+            if (dirVal > 0) {
+              if (sym) sym.classList.add('positive');
+              if (val) val.classList.add('positive');
+            } else if (dirVal < 0) {
+              if (sym) sym.classList.add('negative');
+              if (val) val.classList.add('negative');
+            }
+          }
+        });
+        badges.conviction.textContent = data.highConviction.length;
+      } else {
+        renderEmptyState(panels.conviction);
+        badges.conviction.textContent = '0';
+      }
+
+      // Funding Rates
+      if (data.fundingRates && data.fundingRates.length > 0) {
+        data.fundingRates.forEach(function(f) {
+          renderItem(f, panels.funding, {
+            valueFormat: function(d) { return (d.fundingRate * 100).toFixed(4) + '%'; },
+            valueField: 'fundingRate',
+            directionField: 'fundingRate',
+            colorSymbol: true,
+            metaFormat: function(d) { return d.signal; }
+          });
+        });
+        badges.funding.textContent = data.fundingRates.length;
+      } else {
+        renderEmptyState(panels.funding);
+        badges.funding.textContent = '0';
+      }
+
+      // Squeeze Setups
+      if (data.squeezeSetups && data.squeezeSetups.length > 0) {
+        data.squeezeSetups.forEach(function(s) {
+          renderItem(s, panels.squeeze, {
+            valueFormat: function(d) { return d.signal; },
+            metaFormat: function(d) { return 'Funding: ' + (d.fundingRate * 100).toFixed(4) + '%'; }
+          });
+        });
+        badges.squeeze.textContent = data.squeezeSetups.length;
+      } else {
+        renderEmptyState(panels.squeeze);
+        badges.squeeze.textContent = '0';
+      }
+
+      // Open Interest
+      if (data.openInterest && data.openInterest.length > 0) {
+        data.openInterest.forEach(function(o) {
+          renderItem(o, panels.oi, {
+            valueFormat: function(d) { return formatPercent(d.oiChange); },
+            valueField: 'oiChange',
+            directionField: 'oiChange',
+            colorSymbol: true,
+            metaFormat: function(d) { return d.signal; },
+            subFormat: function(d) { return 'OI: $' + formatNumber(d.openInterest); }
+          });
+        });
+        badges.oi.textContent = data.openInterest.length;
+      } else {
+        renderEmptyState(panels.oi);
+        badges.oi.textContent = '0';
+      }
+
+      // Multi-Timeframe
+      if (data.multiTimeframe && data.multiTimeframe.length > 0) {
+        data.multiTimeframe.forEach(function(m) {
+          renderItem(m, panels.mtf, {
+            valueFormat: function(d) { return d.alignment; },
+            metaFormat: function(d) { return '15m: ' + formatPercent(d.change15m) + ' | 1h: ' + formatPercent(d.change1h); },
+            subFormat: function(d) { return '4h: ' + formatPercent(d.change4h) + ' | RSI: ' + d.rsi1h.toFixed(0); }
+          });
+        });
+        badges.mtf.textContent = data.multiTimeframe.length;
+      } else {
+        renderEmptyState(panels.mtf);
+        badges.mtf.textContent = '0';
+      }
+
+      // RSI Extremes
+      if (data.rsiExtremes && data.rsiExtremes.length > 0) {
+        data.rsiExtremes.forEach(function(r) {
+          renderItem(r, panels.rsi, {
+            valueFormat: function(d) { return 'RSI: ' + d.rsi1h.toFixed(1); },
+            valueField: 'rsi1h',
+            metaFormat: function(d) { return d.rsi1h < 30 ? 'OVERSOLD' : 'OVERBOUGHT'; }
+          });
+        });
+        badges.rsi.textContent = data.rsiExtremes.length;
+      } else {
+        renderEmptyState(panels.rsi);
+        badges.rsi.textContent = '0';
+      }
+
+      // Divergences
+      if (data.divergences && data.divergences.length > 0) {
+        data.divergences.forEach(function(d) {
+          renderItem(d, panels.divergence, {
+            valueFormat: function(dd) { return dd.divergence; },
+            metaFormat: function(dd) { return 'RSI: ' + dd.rsi1h.toFixed(0) + ' | ' + formatPercent(dd.change24h); }
+          });
+        });
+        badges.div.textContent = data.divergences.length;
+      } else {
+        renderEmptyState(panels.divergence);
+        badges.div.textContent = '0';
+      }
+
+      // Liquidation Alerts
+      if (data.liquidations && data.liquidations.length > 0) {
+        data.liquidations.forEach(function(l) {
+          var dirVal = l.side === 'LONG' ? -1 : 1; // Opposite direction for opportunity
+          renderItem(l, panels.liquidation, {
+            valueFormat: function(d) { return d.intensity; },
+            directionField: null,
+            colorSymbol: true,
+            metaFormat: function(d) { return '$' + formatNumber(d.estimatedAmount) + ' ' + d.side + ' liq'; }
+          });
+          var lastItem = panels.liquidation.lastChild;
+          if (lastItem) {
+            var sym = lastItem.querySelector('.item-symbol');
+            if (dirVal > 0 && sym) sym.classList.add('positive');
+            else if (dirVal < 0 && sym) sym.classList.add('negative');
+          }
+        });
+        badges.liq.textContent = data.liquidations.length;
+      } else {
+        renderEmptyState(panels.liquidation, 'No liquidation alerts');
+        badges.liq.textContent = '0';
+      }
+
+      // Whale Alerts
+      if (data.whaleAlerts && data.whaleAlerts.length > 0) {
+        data.whaleAlerts.forEach(function(w) {
+          var dirVal = w.direction === 'BULLISH' ? 1 : -1;
+          renderItem(w, panels.whale, {
+            valueFormat: function(d) { return d.type.replace(/_/g, ' '); },
+            directionField: null,
+            colorSymbol: true,
+            metaFormat: function(d) { return '$' + formatNumber(d.estimatedSize) + ' ' + d.direction; }
+          });
+          var lastItem = panels.whale.lastChild;
+          if (lastItem) {
+            var sym = lastItem.querySelector('.item-symbol');
+            var val = lastItem.querySelector('.item-value');
+            if (dirVal > 0) {
+              if (sym) sym.classList.add('positive');
+              if (val) val.classList.add('positive');
+            } else {
+              if (sym) sym.classList.add('negative');
+              if (val) val.classList.add('negative');
+            }
+          }
+        });
+        badges.whale.textContent = data.whaleAlerts.length;
+      } else {
+        renderEmptyState(panels.whale, 'No whale activity');
+        badges.whale.textContent = '0';
+      }
+
+      // BTC Correlation
+      if (data.correlations && data.correlations.length > 0) {
+        data.correlations.forEach(function(c) {
+          var dirVal = c.outperformance;
+          renderItem(c, panels.correlation, {
+            valueFormat: function(d) { return d.signal; },
+            directionField: 'outperformance',
+            colorSymbol: true,
+            metaFormat: function(d) { return 'Corr: ' + d.btcCorrelation.toFixed(2) + ' | ' + formatPercent(d.outperformance); }
+          });
+        });
+        badges.corr.textContent = data.correlations.length;
+      } else {
+        renderEmptyState(panels.correlation, 'No correlation alerts');
+        badges.corr.textContent = '0';
+      }
+
+      // Pattern Recognition
+      if (data.patterns && data.patterns.length > 0) {
+        data.patterns.forEach(function(p) {
+          var dirVal = p.direction === 'BULLISH' ? 1 : (p.direction === 'BEARISH' ? -1 : 0);
+          renderItem(p, panels.pattern, {
+            valueFormat: function(d) { return d.pattern.replace(/_/g, ' '); },
+            directionField: null,
+            colorSymbol: true,
+            metaFormat: function(d) { return d.description; },
+            subFormat: function(d) { return 'Conf: ' + d.confidence + '%'; }
+          });
+          var lastItem = panels.pattern.lastChild;
+          if (lastItem) {
+            var sym = lastItem.querySelector('.item-symbol');
+            var val = lastItem.querySelector('.item-value');
+            if (dirVal > 0) {
+              if (sym) sym.classList.add('positive');
+              if (val) val.classList.add('positive');
+            } else if (dirVal < 0) {
+              if (sym) sym.classList.add('negative');
+              if (val) val.classList.add('negative');
+            }
+          }
+        });
+        badges.pattern.textContent = data.patterns.length;
+      } else {
+        renderEmptyState(panels.pattern, 'No patterns detected');
+        badges.pattern.textContent = '0';
+      }
+
+      // Entry Signals Long
+      if (data.entrySignals && data.entrySignals.length > 0) {
+        var longSignals = data.entrySignals.filter(function(s) { return s.direction === 'LONG'; });
+        var shortSignals = data.entrySignals.filter(function(s) { return s.direction === 'SHORT'; });
+
+        if (longSignals.length > 0) {
+          longSignals.forEach(function(s) { renderEntrySignal(s, panels.entryLong); });
+          badges.entryLong.textContent = longSignals.length;
+        } else {
+          renderEmptyState(panels.entryLong, 'No long entries');
+          badges.entryLong.textContent = '0';
+        }
+
+        if (shortSignals.length > 0) {
+          shortSignals.forEach(function(s) { renderEntrySignal(s, panels.entryShort); });
+          badges.entryShort.textContent = shortSignals.length;
+        } else {
+          renderEmptyState(panels.entryShort, 'No short entries');
+          badges.entryShort.textContent = '0';
+        }
+      } else {
+        renderEmptyState(panels.entryLong, 'No long entries');
+        renderEmptyState(panels.entryShort, 'No short entries');
+        badges.entryLong.textContent = '0';
+        badges.entryShort.textContent = '0';
+      }
+
+      // Update Market Sentiment
+      if (data.marketSentiment) {
+        updateSentiment(data.marketSentiment);
+      }
+
+      // Update Win Rate Stats
+      if (data.winRateStats) {
+        updateWinRateStats(data.winRateStats);
+      }
+
+      // Handle Notifications
+      if (data.notifications && data.notifications.length > 0) {
+        data.notifications.forEach(function(n) {
+          renderNotification(n);
+        });
+      }
+
+      // Render Top Picks
+      renderTopPicks(data);
+    });
+
+    // Filter handlers
+    minVolumeFilter.addEventListener('change', function() {
+      socket.emit('setFilter', { minVolume24h: parseInt(minVolumeFilter.value) });
+    });
+
+    presetButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        presetButtons.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        fetch('/api/filters/preset/' + btn.dataset.preset, { method: 'POST' });
+      });
+    });
+
+    // Connection handling
+    socket.on('connect', function() {
+      console.log('Connected to server');
+    });
+
+    socket.on('disconnect', function() {
+      statusDot.classList.remove('connected');
+      statusText.textContent = 'Disconnected';
+    });
+
+    // View toggle handler - Default to compact mode
+    var viewToggle = document.getElementById('viewToggle');
+    var mainContainer = document.querySelector('.main-container');
+    var isCompactView = true;
+
+    // Set compact mode as default on load
+    mainContainer.classList.add('compact-view');
+    viewToggle.textContent = 'Cards';
+    viewToggle.classList.add('active');
+
+    viewToggle.addEventListener('click', function() {
+      isCompactView = !isCompactView;
+      if (isCompactView) {
+        mainContainer.classList.add('compact-view');
+        viewToggle.textContent = 'Cards';
+        viewToggle.classList.add('active');
+      } else {
+        mainContainer.classList.remove('compact-view');
+        viewToggle.textContent = 'Compact';
+        viewToggle.classList.remove('active');
+      }
+    });
+
+    // Set default filter to ALL on page load
+    fetch('/api/filters/preset/all', { method: 'POST' });
+  </script>
+</body>
+</html>
