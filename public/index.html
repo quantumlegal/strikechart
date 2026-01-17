@@ -305,6 +305,125 @@
       overflow-y: auto;
     }
 
+    /* Collapsible Panel Styles */
+    .panel-header {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .panel-header:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .collapse-toggle {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8b949e;
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .collapse-toggle svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .panel.collapsed .collapse-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .panel.collapsed .panel-content {
+      display: none;
+    }
+
+    .panel-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Section Collapsible Styles */
+    .section-collapsible {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-collapsible:hover {
+      opacity: 0.9;
+    }
+
+    .section-collapsible .collapse-toggle {
+      display: inline-flex;
+      margin-left: 8px;
+    }
+
+    .collapsible-content {
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      overflow: hidden;
+    }
+
+    .collapsible-content.collapsed {
+      max-height: 0 !important;
+      opacity: 0;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Performance Section Collapsible */
+    .performance-section .performance-header {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+      border-radius: 8px;
+      margin: -8px;
+      padding: 8px;
+    }
+
+    .performance-section .performance-header:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .performance-section.collapsed .performance-grid,
+    .performance-section.collapsed .type-performance,
+    .performance-section.collapsed .recent-signals {
+      display: none;
+    }
+
+    .performance-section.collapsed {
+      padding-bottom: 8px;
+    }
+
+    /* Top Picks Section Collapsible */
+    .top-picks-section .top-picks-header {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .top-picks-section.collapsed .top-picks-grid {
+      display: none;
+    }
+
+    /* Smart Signals Section Collapsible */
+    .smart-signals-section.collapsed {
+      display: none;
+    }
+
+    /* Panels Grid Collapsible */
+    .panels-grid.collapsed {
+      display: none;
+    }
+
     /* Smart Signal Panel - Special Styling */
     .panel.smart-long {
       border-color: #238636;
@@ -2106,12 +2225,17 @@
   <div class="notification-container" id="notificationContainer"></div>
 
   <main class="main-container">
-    <!-- Performance Tracking Section -->
-    <div class="performance-section" id="performanceSection">
-      <div class="performance-header">
+    <!-- Performance Tracking Section - Collapsed by default -->
+    <div class="performance-section collapsed" id="performanceSection" data-collapsible="performance">
+      <div class="performance-header" onclick="toggleCollapse('performanceSection')">
         <div>
           <div class="performance-title">
             <span>📊</span> SIGNAL PERFORMANCE TRACKER
+            <span class="collapse-toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
           </div>
           <div class="performance-subtitle">Real-time tracking of signal accuracy and P&L</div>
         </div>
@@ -2154,11 +2278,16 @@
     </div>
 
     <!-- TOP PICKS TRADE Section - Priority #1 -->
-    <div class="top-picks-section">
-      <div class="top-picks-header">
+    <div class="top-picks-section" id="topPicksSection" data-collapsible="topPicks">
+      <div class="top-picks-header" onclick="toggleCollapse('topPicksSection')">
         <div>
           <div class="top-picks-title">
             <span>🎯</span> TOP PICKS TRADE
+            <span class="collapse-toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
           </div>
           <div class="top-picks-subtitle">Optimized for scalping & short-term trades with funding advantage</div>
         </div>
@@ -2187,12 +2316,17 @@
     </div>
 
     <!-- Smart Signals Section -->
-    <div class="section-header">
+    <div class="section-header section-collapsible" onclick="toggleSection('smartSignalsSection')">
       <span class="section-icon">🧠</span>
       <span class="section-title">SMART SIGNALS - AI-Powered Trade Detection</span>
+      <span class="collapse-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
     </div>
 
-    <div class="smart-signals-section">
+    <div class="smart-signals-section" id="smartSignalsSection">
       <!-- Top Long Signals -->
       <div class="panel smart-long">
         <div class="panel-header">
@@ -2227,8 +2361,8 @@
       </div>
     </div>
 
-    <!-- Early Entry & Breakout Section -->
-    <div class="smart-signals-section" style="grid-template-columns: repeat(3, 1fr);">
+    <!-- Early Entry & Breakout Section (part of Smart Signals) -->
+    <div class="smart-signals-section" id="smartSignalsSection2" style="grid-template-columns: repeat(3, 1fr);">
       <!-- Early Entries -->
       <div class="panel">
         <div class="panel-header">
@@ -2264,12 +2398,17 @@
     </div>
 
     <!-- Market Data Section -->
-    <div class="section-header">
+    <div class="section-header section-collapsible" onclick="toggleSection('marketDataSection')">
       <span class="section-icon">📊</span>
       <span class="section-title">MARKET DATA</span>
+      <span class="collapse-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
     </div>
 
-    <div class="panels-grid">
+    <div class="panels-grid" id="marketDataSection">
       <!-- Top Movers -->
       <div class="panel">
         <div class="panel-header">
@@ -2308,12 +2447,17 @@
     </div>
 
     <!-- Advanced Indicators Section -->
-    <div class="section-header">
+    <div class="section-header section-collapsible" onclick="toggleSection('advancedIndicatorsSection')">
       <span class="section-icon">🎯</span>
       <span class="section-title">ADVANCED INDICATORS</span>
+      <span class="collapse-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
     </div>
 
-    <div class="panels-grid">
+    <div class="panels-grid" id="advancedIndicatorsSection">
       <!-- Funding Rates -->
       <div class="panel">
         <div class="panel-header">
@@ -2370,12 +2514,17 @@
     </div>
 
     <!-- Advanced Detection Section -->
-    <div class="section-header">
+    <div class="section-header section-collapsible" onclick="toggleSection('advancedDetectionSection')">
       <span class="section-icon">🔬</span>
       <span class="section-title">ADVANCED DETECTION</span>
+      <span class="collapse-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
     </div>
 
-    <div class="panels-grid">
+    <div class="panels-grid" id="advancedDetectionSection">
       <!-- Liquidation Alerts -->
       <div class="panel">
         <div class="panel-header">
@@ -2414,12 +2563,17 @@
     </div>
 
     <!-- Entry Timing Section -->
-    <div class="section-header">
+    <div class="section-header section-collapsible" onclick="toggleSection('entryTimingSection')">
       <span class="section-icon">🎯</span>
       <span class="section-title">SMART ENTRY TIMING</span>
+      <span class="collapse-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
     </div>
 
-    <div class="panels-grid" style="grid-template-columns: repeat(2, 1fr);">
+    <div class="panels-grid" id="entryTimingSection" style="grid-template-columns: repeat(2, 1fr);">
       <!-- Entry Signals Long -->
       <div class="panel smart-long">
         <div class="panel-header">
@@ -2445,6 +2599,173 @@
   </main>
 
   <script>
+    // ====== COLLAPSE/EXPAND FUNCTIONALITY ======
+    const COLLAPSE_STORAGE_KEY = 'signalsense_collapsed_sections';
+
+    // Load collapsed state from localStorage
+    function loadCollapsedState() {
+      try {
+        const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : { performanceSection: true }; // Performance collapsed by default
+      } catch (e) {
+        return { performanceSection: true };
+      }
+    }
+
+    // Save collapsed state to localStorage
+    function saveCollapsedState(state) {
+      try {
+        localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn('Could not save collapse state');
+      }
+    }
+
+    // Toggle collapse for sections (performance, top picks)
+    function toggleCollapse(elementId) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      element.classList.toggle('collapsed');
+
+      // Update toggle icon rotation
+      const toggle = element.querySelector('.collapse-toggle');
+      if (toggle) {
+        toggle.style.transform = element.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0deg)';
+      }
+
+      // Save state
+      const state = loadCollapsedState();
+      state[elementId] = element.classList.contains('collapsed');
+      saveCollapsedState(state);
+    }
+
+    // Toggle collapse for section grids (smart signals, market data, etc.)
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (!section) return;
+
+      section.classList.toggle('collapsed');
+
+      // Also toggle the second smart signals section if toggling the first
+      if (sectionId === 'smartSignalsSection') {
+        const section2 = document.getElementById('smartSignalsSection2');
+        if (section2) {
+          section2.classList.toggle('collapsed');
+        }
+      }
+
+      // Update the header's toggle icon
+      const headers = document.querySelectorAll('.section-header.section-collapsible');
+      headers.forEach(header => {
+        const onclick = header.getAttribute('onclick');
+        if (onclick && onclick.includes(sectionId)) {
+          const toggle = header.querySelector('.collapse-toggle');
+          if (toggle) {
+            toggle.style.transform = section.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0deg)';
+          }
+        }
+      });
+
+      // Save state
+      const state = loadCollapsedState();
+      state[sectionId] = section.classList.contains('collapsed');
+      if (sectionId === 'smartSignalsSection') {
+        state['smartSignalsSection2'] = section.classList.contains('collapsed');
+      }
+      saveCollapsedState(state);
+    }
+
+    // Toggle collapse for individual panels
+    function togglePanel(panelElement) {
+      panelElement.classList.toggle('collapsed');
+    }
+
+    // Initialize collapsed states on page load
+    function initializeCollapseStates() {
+      const state = loadCollapsedState();
+
+      Object.entries(state).forEach(([id, isCollapsed]) => {
+        const element = document.getElementById(id);
+        if (element && isCollapsed) {
+          element.classList.add('collapsed');
+
+          // Update toggle icon
+          const toggle = element.querySelector('.collapse-toggle');
+          if (toggle) {
+            toggle.style.transform = 'rotate(-90deg)';
+          }
+
+          // For section headers, find and update their toggles
+          const headers = document.querySelectorAll('.section-header.section-collapsible');
+          headers.forEach(header => {
+            const onclick = header.getAttribute('onclick');
+            if (onclick && onclick.includes(id)) {
+              const headerToggle = header.querySelector('.collapse-toggle');
+              if (headerToggle) {
+                headerToggle.style.transform = 'rotate(-90deg)';
+              }
+            }
+          });
+        }
+      });
+
+      // Add collapse toggle icons and click handlers to all panels
+      addPanelCollapseHandlers();
+    }
+
+    // Add collapse functionality to all individual panels
+    function addPanelCollapseHandlers() {
+      const panels = document.querySelectorAll('.panel');
+      const state = loadCollapsedState();
+
+      panels.forEach((panel, index) => {
+        const header = panel.querySelector('.panel-header');
+        if (!header) return;
+
+        // Create unique ID for this panel if it doesn't have one
+        const panelId = panel.id || `panel-${index}`;
+        if (!panel.id) panel.id = panelId;
+
+        // Add collapse toggle icon if not already present
+        if (!header.querySelector('.collapse-toggle')) {
+          const toggle = document.createElement('span');
+          toggle.className = 'collapse-toggle';
+          toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+          header.appendChild(toggle);
+        }
+
+        // Add click handler
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
+          panel.classList.toggle('collapsed');
+
+          const toggle = header.querySelector('.collapse-toggle');
+          if (toggle) {
+            toggle.style.transform = panel.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0deg)';
+          }
+
+          // Save state
+          const currentState = loadCollapsedState();
+          currentState[panelId] = panel.classList.contains('collapsed');
+          saveCollapsedState(currentState);
+        });
+
+        // Restore collapsed state
+        if (state[panelId]) {
+          panel.classList.add('collapsed');
+          const toggle = header.querySelector('.collapse-toggle');
+          if (toggle) {
+            toggle.style.transform = 'rotate(-90deg)';
+          }
+        }
+      });
+    }
+
+    // Run initialization after DOM is ready
+    document.addEventListener('DOMContentLoaded', initializeCollapseStates);
+
+    // ====== MAIN APPLICATION ======
     const socket = io();
 
     // DOM Elements
