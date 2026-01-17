@@ -179,6 +179,46 @@ export class WebServer {
     this.app.get('/', (req, res) => {
       res.sendFile(path.join(__dirname, '../../public/index.html'));
     });
+
+    // Price history endpoint for sparklines
+    this.app.get('/api/price-history/:symbol', (req, res) => {
+      const symbol = req.params.symbol.toUpperCase();
+      const priceHistory = this.dataStore.getPriceHistory(symbol);
+
+      // Return last 30 price points for sparkline
+      const recentHistory = priceHistory.slice(-30).map(p => ({
+        price: p.price,
+        timestamp: p.timestamp
+      }));
+
+      res.json({
+        symbol,
+        history: recentHistory,
+        count: recentHistory.length
+      });
+    });
+
+    // Performance stats endpoint
+    this.app.get('/api/performance', (req, res) => {
+      const stats = this.winRateTracker.getOverallStats();
+      const recentSignals = this.winRateTracker.getRecentSignals(20);
+
+      res.json({
+        overall: stats,
+        recentSignals: recentSignals.map(s => ({
+          id: s.id,
+          symbol: s.symbol,
+          direction: s.direction,
+          entryType: s.entryType,
+          entryPrice: s.entryPrice,
+          exitPrice: s.exitPrice,
+          outcome: s.outcome,
+          pnlPercent: s.pnlPercent,
+          confidence: s.confidence,
+          timestamp: s.timestamp
+        }))
+      });
+    });
   }
 
   private setupSocketIO(): void {
@@ -313,6 +353,20 @@ export class WebServer {
 
       // Win rate stats
       winRateStats: this.winRateTracker.getOverallStats(),
+
+      // Recent signals for performance tracking
+      recentSignals: this.winRateTracker.getRecentSignals(10).map(s => ({
+        id: s.id,
+        symbol: s.symbol,
+        direction: s.direction,
+        entryType: s.entryType,
+        entryPrice: s.entryPrice,
+        exitPrice: s.exitPrice,
+        outcome: s.outcome,
+        pnlPercent: s.pnlPercent,
+        confidence: s.confidence,
+        timestamp: s.timestamp
+      })),
 
       // Notifications
       notifications: this.notificationManager.getAndClearPending(),

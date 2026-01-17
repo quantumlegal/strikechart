@@ -1696,6 +1696,316 @@
         font-size: 16px;
       }
     }
+
+    /* ====== SPARKLINE CHARTS ====== */
+    .sparkline-container {
+      width: 60px;
+      height: 24px;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .sparkline {
+      width: 100%;
+      height: 100%;
+    }
+
+    .sparkline-path {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sparkline-path.up {
+      stroke: #3fb950;
+    }
+
+    .sparkline-path.down {
+      stroke: #f85149;
+    }
+
+    .sparkline-path.neutral {
+      stroke: #8b949e;
+    }
+
+    .sparkline-dot {
+      r: 2;
+    }
+
+    .sparkline-dot.up {
+      fill: #3fb950;
+    }
+
+    .sparkline-dot.down {
+      fill: #f85149;
+    }
+
+    .sparkline-dot.neutral {
+      fill: #8b949e;
+    }
+
+    /* Item with sparkline */
+    .item-with-sparkline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #0d1117;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .item-with-sparkline:hover {
+      background: #21262d;
+    }
+
+    .item-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ====== PERFORMANCE TRACKING PANEL ====== */
+    .performance-section {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 15px;
+    }
+
+    .performance-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .performance-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e1e5eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .performance-subtitle {
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .performance-stat {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .performance-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #e1e5eb;
+      margin-bottom: 4px;
+    }
+
+    .performance-stat-value.positive {
+      color: #3fb950;
+    }
+
+    .performance-stat-value.negative {
+      color: #f85149;
+    }
+
+    .performance-stat-label {
+      font-size: 10px;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Recent Signals Table */
+    .recent-signals {
+      margin-top: 16px;
+    }
+
+    .recent-signals-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: #8b949e;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .signals-table {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .signal-row {
+      display: grid;
+      grid-template-columns: 100px 70px 80px 70px 80px auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      background: #0d1117;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .signal-row:hover {
+      background: #21262d;
+      cursor: pointer;
+    }
+
+    .signal-symbol {
+      font-weight: 600;
+      color: #e1e5eb;
+    }
+
+    .signal-direction {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .signal-direction.long {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+
+    .signal-direction.short {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .signal-entry {
+      color: #8b949e;
+    }
+
+    .signal-pnl {
+      font-weight: 600;
+    }
+
+    .signal-pnl.positive {
+      color: #3fb950;
+    }
+
+    .signal-pnl.negative {
+      color: #f85149;
+    }
+
+    .signal-outcome {
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .signal-outcome.win {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+
+    .signal-outcome.loss {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .signal-outcome.pending {
+      background: rgba(139, 148, 158, 0.2);
+      color: #8b949e;
+    }
+
+    .signal-time {
+      color: #8b949e;
+      font-size: 10px;
+    }
+
+    /* Performance by Type */
+    .type-performance {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .type-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0d1117;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .type-stat-label {
+      color: #8b949e;
+    }
+
+    .type-stat-value {
+      font-weight: 600;
+    }
+
+    .type-stat-value.positive {
+      color: #3fb950;
+    }
+
+    .type-stat-value.negative {
+      color: #f85149;
+    }
+
+    /* Performance responsive */
+    @media (max-width: 1200px) {
+      .performance-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .signal-row {
+        grid-template-columns: 80px 60px 70px 60px 60px auto;
+        font-size: 11px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .signal-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+      }
+      .signal-entry, .signal-time {
+        display: none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .performance-stat {
+        padding: 8px;
+      }
+      .performance-stat-value {
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1796,6 +2106,53 @@
   <div class="notification-container" id="notificationContainer"></div>
 
   <main class="main-container">
+    <!-- Performance Tracking Section -->
+    <div class="performance-section" id="performanceSection">
+      <div class="performance-header">
+        <div>
+          <div class="performance-title">
+            <span>📊</span> SIGNAL PERFORMANCE TRACKER
+          </div>
+          <div class="performance-subtitle">Real-time tracking of signal accuracy and P&L</div>
+        </div>
+        <div class="performance-subtitle" id="performanceLastUpdate">--</div>
+      </div>
+      <div class="performance-grid">
+        <div class="performance-stat">
+          <div class="performance-stat-value" id="perfWinRate">--%</div>
+          <div class="performance-stat-label">Win Rate</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value" id="perfTotalSignals">--</div>
+          <div class="performance-stat-label">Total Signals</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value positive" id="perfWins">--</div>
+          <div class="performance-stat-label">Wins</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value negative" id="perfLosses">--</div>
+          <div class="performance-stat-label">Losses</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value" id="perfAvgWin">--%</div>
+          <div class="performance-stat-label">Avg Win</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value" id="perfAvgLoss">--%</div>
+          <div class="performance-stat-label">Avg Loss</div>
+        </div>
+      </div>
+      <div class="type-performance" id="typePerformance"></div>
+      <div class="recent-signals">
+        <div class="recent-signals-header">
+          <span>Recent Signals</span>
+          <span id="recentSignalsCount">0 signals</span>
+        </div>
+        <div class="signals-table" id="signalsTable"></div>
+      </div>
+    </div>
+
     <!-- TOP PICKS TRADE Section - Priority #1 -->
     <div class="top-picks-section">
       <div class="top-picks-header">
@@ -2164,6 +2521,21 @@
     const bearishCountEl = document.getElementById('bearishCount');
     const notificationContainer = document.getElementById('notificationContainer');
 
+    // Performance tracking elements
+    const perfWinRate = document.getElementById('perfWinRate');
+    const perfTotalSignals = document.getElementById('perfTotalSignals');
+    const perfWins = document.getElementById('perfWins');
+    const perfLosses = document.getElementById('perfLosses');
+    const perfAvgWin = document.getElementById('perfAvgWin');
+    const perfAvgLoss = document.getElementById('perfAvgLoss');
+    const typePerformance = document.getElementById('typePerformance');
+    const signalsTable = document.getElementById('signalsTable');
+    const recentSignalsCount = document.getElementById('recentSignalsCount');
+    const performanceLastUpdate = document.getElementById('performanceLastUpdate');
+
+    // Price history cache for sparklines
+    const priceHistoryCache = new Map();
+
     // Top Picks elements
     const topLongPicks = document.getElementById('topLongPicks');
     const topShortPicks = document.getElementById('topShortPicks');
@@ -2193,6 +2565,265 @@
       if (confidence >= 70) return 'high';
       if (confidence >= 50) return 'medium';
       return 'low';
+    }
+
+    // ====== SPARKLINE CHART FUNCTIONS ======
+    function createSparkline(prices, width, height) {
+      if (!prices || prices.length < 2) {
+        return null;
+      }
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'sparkline');
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+
+      const values = prices.map(p => p.price);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+
+      // Normalize values to fit in the SVG
+      const points = values.map((v, i) => {
+        const x = (i / (values.length - 1)) * width;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+
+      // Determine trend
+      const firstPrice = values[0];
+      const lastPrice = values[values.length - 1];
+      const trendClass = lastPrice > firstPrice ? 'up' : (lastPrice < firstPrice ? 'down' : 'neutral');
+
+      // Create path
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'sparkline-path ' + trendClass);
+      path.setAttribute('d', 'M' + points.join(' L'));
+
+      svg.appendChild(path);
+
+      // Add end dot
+      const lastPoint = points[points.length - 1].split(',');
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('class', 'sparkline-dot ' + trendClass);
+      dot.setAttribute('cx', lastPoint[0]);
+      dot.setAttribute('cy', lastPoint[1]);
+      dot.setAttribute('r', '2');
+      svg.appendChild(dot);
+
+      return svg;
+    }
+
+    // Fetch price history for a symbol
+    async function fetchPriceHistory(symbol) {
+      // Check cache first (valid for 5 seconds)
+      const cached = priceHistoryCache.get(symbol);
+      if (cached && Date.now() - cached.timestamp < 5000) {
+        return cached.data;
+      }
+
+      try {
+        const response = await fetch('/api/price-history/' + symbol);
+        const data = await response.json();
+        priceHistoryCache.set(symbol, { data: data.history, timestamp: Date.now() });
+        return data.history;
+      } catch (e) {
+        console.error('Failed to fetch price history for', symbol);
+        return null;
+      }
+    }
+
+    // ====== PERFORMANCE TRACKING FUNCTIONS ======
+    function updatePerformancePanel(stats, recentSignals) {
+      if (!stats) return;
+
+      // Update main stats
+      if (stats.winRate !== undefined) {
+        perfWinRate.textContent = stats.winRate.toFixed(1) + '%';
+        perfWinRate.className = 'performance-stat-value ' + (stats.winRate >= 50 ? 'positive' : 'negative');
+      }
+
+      if (stats.totalSignals !== undefined) {
+        perfTotalSignals.textContent = stats.totalSignals;
+      }
+
+      if (stats.wins !== undefined) {
+        perfWins.textContent = stats.wins;
+      }
+
+      if (stats.losses !== undefined) {
+        perfLosses.textContent = stats.losses;
+      }
+
+      if (stats.avgWinPercent !== undefined) {
+        perfAvgWin.textContent = '+' + stats.avgWinPercent.toFixed(2) + '%';
+        perfAvgWin.className = 'performance-stat-value positive';
+      }
+
+      if (stats.avgLossPercent !== undefined) {
+        perfAvgLoss.textContent = stats.avgLossPercent.toFixed(2) + '%';
+        perfAvgLoss.className = 'performance-stat-value negative';
+      }
+
+      // Update timestamp
+      performanceLastUpdate.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+      // Update by-type performance
+      if (stats.byType && typePerformance) {
+        typePerformance.innerHTML = '';
+        Object.entries(stats.byType).forEach(([type, typeStats]) => {
+          if (typeStats.totalSignals > 0) {
+            const typeStat = document.createElement('div');
+            typeStat.className = 'type-stat';
+
+            const label = document.createElement('span');
+            label.className = 'type-stat-label';
+            label.textContent = type + ':';
+
+            const value = document.createElement('span');
+            value.className = 'type-stat-value ' + (typeStats.winRate >= 50 ? 'positive' : 'negative');
+            value.textContent = typeStats.winRate.toFixed(0) + '% (' + typeStats.totalSignals + ')';
+
+            typeStat.appendChild(label);
+            typeStat.appendChild(value);
+            typePerformance.appendChild(typeStat);
+          }
+        });
+      }
+
+      // Update recent signals table
+      if (recentSignals && signalsTable) {
+        signalsTable.innerHTML = '';
+        recentSignalsCount.textContent = recentSignals.length + ' signals';
+
+        if (recentSignals.length === 0) {
+          signalsTable.innerHTML = '<div class="empty-state">No signals recorded yet</div>';
+          return;
+        }
+
+        recentSignals.forEach(signal => {
+          const row = document.createElement('div');
+          row.className = 'signal-row';
+          row.onclick = () => openBinance(signal.symbol);
+
+          // Symbol
+          const symbolCell = document.createElement('div');
+          symbolCell.className = 'signal-symbol';
+          symbolCell.textContent = signal.symbol;
+
+          // Direction
+          const dirCell = document.createElement('div');
+          dirCell.className = 'signal-direction ' + signal.direction.toLowerCase();
+          dirCell.textContent = signal.direction;
+
+          // Entry price
+          const entryCell = document.createElement('div');
+          entryCell.className = 'signal-entry';
+          entryCell.textContent = '$' + (signal.entryPrice ? signal.entryPrice.toFixed(4) : '--');
+
+          // P&L
+          const pnlCell = document.createElement('div');
+          const pnl = signal.pnlPercent || 0;
+          pnlCell.className = 'signal-pnl ' + (pnl >= 0 ? 'positive' : 'negative');
+          pnlCell.textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '%';
+
+          // Outcome
+          const outcomeCell = document.createElement('div');
+          const outcome = signal.outcome || 'PENDING';
+          outcomeCell.className = 'signal-outcome ' + outcome.toLowerCase();
+          outcomeCell.textContent = outcome;
+
+          // Time
+          const timeCell = document.createElement('div');
+          timeCell.className = 'signal-time';
+          timeCell.textContent = new Date(signal.timestamp).toLocaleTimeString();
+
+          row.appendChild(symbolCell);
+          row.appendChild(dirCell);
+          row.appendChild(entryCell);
+          row.appendChild(pnlCell);
+          row.appendChild(outcomeCell);
+          row.appendChild(timeCell);
+
+          signalsTable.appendChild(row);
+        });
+      }
+    }
+
+    // ====== RENDER ITEM WITH SPARKLINE ======
+    function renderItemWithSparkline(data, container, options = {}) {
+      const div = document.createElement('div');
+      div.className = 'item-with-sparkline';
+      div.onclick = () => openBinance(data.symbol);
+
+      const value = options.valueField ? data[options.valueField] : data.change24h || 0;
+      const valueText = options.valueFormat ? options.valueFormat(data) : formatPercent(value);
+      const metaText = options.metaFormat ? options.metaFormat(data) : '';
+      const subText = options.subFormat ? options.subFormat(data) : '';
+
+      // Determine direction for coloring
+      const directionValue = options.directionField ? data[options.directionField] : value;
+      const isPositive = directionValue > 0;
+      const isNegative = directionValue < 0;
+      const directionClass = isPositive ? 'positive' : (isNegative ? 'negative' : '');
+
+      // Main content wrapper
+      const mainDiv = document.createElement('div');
+      mainDiv.className = 'item-main';
+
+      const leftDiv = document.createElement('div');
+      leftDiv.className = 'item-left';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'item-symbol' + (options.colorSymbol && directionClass ? ' ' + directionClass : '');
+      symbolSpan.textContent = data.symbol;
+      leftDiv.appendChild(symbolSpan);
+
+      if (metaText) {
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'item-meta';
+        metaSpan.textContent = metaText;
+        leftDiv.appendChild(metaSpan);
+      }
+
+      const rightDiv = document.createElement('div');
+      rightDiv.className = 'item-right';
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'item-value' + (directionClass ? ' ' + directionClass : '');
+      valueSpan.textContent = valueText;
+      rightDiv.appendChild(valueSpan);
+
+      if (subText) {
+        const subSpan = document.createElement('span');
+        subSpan.className = 'item-sub';
+        subSpan.textContent = subText;
+        rightDiv.appendChild(subSpan);
+      }
+
+      mainDiv.appendChild(leftDiv);
+      mainDiv.appendChild(rightDiv);
+      div.appendChild(mainDiv);
+
+      // Add sparkline container (async load)
+      if (options.showSparkline !== false) {
+        const sparkContainer = document.createElement('div');
+        sparkContainer.className = 'sparkline-container';
+        sparkContainer.id = 'spark-' + data.symbol;
+        div.appendChild(sparkContainer);
+
+        // Fetch and render sparkline asynchronously
+        fetchPriceHistory(data.symbol).then(history => {
+          if (history && history.length >= 2) {
+            const sparkline = createSparkline(history, 60, 24);
+            if (sparkline && sparkContainer.parentNode) {
+              sparkContainer.appendChild(sparkline);
+            }
+          }
+        });
+      }
+
+      container.appendChild(div);
     }
 
     // Render functions
@@ -2774,16 +3405,17 @@
         badges.lowRisk.textContent = '0';
       }
 
-      // Top Movers
+      // Top Movers - WITH SPARKLINES
       try {
         if (data.topMovers && data.topMovers.length > 0) {
           console.log('Rendering topMovers:', data.topMovers[0]);
           data.topMovers.forEach(function(m) {
-            renderItem(m, panels.topMovers, {
+            renderItemWithSparkline(m, panels.topMovers, {
               valueField: 'change24h',
               directionField: 'change24h',
               colorSymbol: true,
-              metaFormat: function(d) { return '$' + formatNumber(d.lastPrice); }
+              metaFormat: function(d) { return '$' + formatNumber(d.lastPrice); },
+              showSparkline: true
             });
           });
           badges.movers.textContent = data.topMovers.length;
@@ -2795,15 +3427,16 @@
         console.error('Error rendering topMovers:', e);
       }
 
-      // Velocity Alerts
+      // Velocity Alerts - WITH SPARKLINES
       if (data.velocityAlerts && data.velocityAlerts.length > 0) {
         data.velocityAlerts.forEach(function(v) {
-          renderItem(v, panels.velocity, {
+          renderItemWithSparkline(v, panels.velocity, {
             valueFormat: function(d) { return formatPercent(d.velocity) + '/min'; },
             valueField: 'velocity',
             directionField: 'velocity',
             colorSymbol: true,
-            metaFormat: function(d) { return d.acceleration > 0 ? '↗ Accelerating' : '→ Steady'; }
+            metaFormat: function(d) { return d.acceleration > 0 ? '↗ Accelerating' : '→ Steady'; },
+            showSparkline: true
           });
         });
         badges.velocity.textContent = data.velocityAlerts.length;
@@ -2812,15 +3445,16 @@
         badges.velocity.textContent = '0';
       }
 
-      // Volume Spikes
+      // Volume Spikes - WITH SPARKLINES
       if (data.volumeSpikes && data.volumeSpikes.length > 0) {
         data.volumeSpikes.forEach(function(v) {
-          renderItem(v, panels.volume, {
+          renderItemWithSparkline(v, panels.volume, {
             valueFormat: function(d) { return d.multiplier.toFixed(1) + 'x avg'; },
             valueField: 'multiplier',
             directionField: 'priceChange',
             colorSymbol: true,
-            metaFormat: function(d) { return formatPercent(d.priceChange); }
+            metaFormat: function(d) { return formatPercent(d.priceChange); },
+            showSparkline: true
           });
         });
         badges.volume.textContent = data.volumeSpikes.length;
@@ -3089,6 +3723,9 @@
       if (data.winRateStats) {
         updateWinRateStats(data.winRateStats);
       }
+
+      // Update Performance Tracking Panel
+      updatePerformancePanel(data.winRateStats, data.recentSignals);
 
       // Handle Notifications
       if (data.notifications && data.notifications.length > 0) {
