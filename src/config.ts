@@ -73,4 +73,17 @@ export const config = {
   logging: {
     verbose: !isProduction,
   },
+
+  // ML Service configuration
+  ml: {
+    enabled: process.env.ML_ENABLED !== 'false',
+    serviceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000',
+    timeout: Number(process.env.ML_TIMEOUT) || 2000,
+    minSignalsForTraining: Number(process.env.ML_MIN_SIGNALS) || 500,
+    mlWeight: Number(process.env.ML_WEIGHT) || 0.6,
+    ruleWeight: Number(process.env.RULE_WEIGHT) || 0.4,
+    filterThreshold: Number(process.env.ML_FILTER_THRESHOLD) || 0.40, // Filter signals below 40% win prob
+    healthCheckInterval: 30000, // 30 seconds
+    cacheTTL: 5000, // 5 second cache
+  },
 };

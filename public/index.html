@@ -2167,6 +2167,218 @@
         font-size: 16px;
       }
     }
+
+    /* ML Status Badge Styles */
+    .ml-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(30, 30, 45, 0.7);
+      border: 1px solid #30363d;
+    }
+
+    .ml-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6e7681;
+    }
+
+    .ml-status-dot.active {
+      background: #a371f7;
+      box-shadow: 0 0 8px #a371f7;
+    }
+
+    .ml-status-dot.inactive {
+      background: #6e7681;
+    }
+
+    .ml-status-label {
+      color: #8b949e;
+    }
+
+    .ml-status-value {
+      color: #e1e5eb;
+      font-weight: 500;
+    }
+
+    .ml-version {
+      color: #a371f7;
+      font-size: 11px;
+    }
+
+    /* ML Quality Tier Badges */
+    .quality-tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .quality-tier-badge.tier-high {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .quality-tier-badge.tier-medium {
+      background: rgba(210, 153, 34, 0.2);
+      color: #d29922;
+      border: 1px solid rgba(210, 153, 34, 0.3);
+    }
+
+    .quality-tier-badge.tier-low {
+      background: rgba(240, 136, 62, 0.2);
+      color: #f0883e;
+      border: 1px solid rgba(240, 136, 62, 0.3);
+    }
+
+    .quality-tier-badge.tier-filter {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+      border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+
+    /* ML Enhanced Signal Card */
+    .smart-item.ml-enhanced {
+      border-left: 3px solid #a371f7;
+    }
+
+    .ml-confidence-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(139, 148, 158, 0.2);
+      font-size: 11px;
+    }
+
+    .ml-confidence-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ml-confidence-label {
+      color: #8b949e;
+    }
+
+    .ml-confidence-value {
+      font-weight: 600;
+    }
+
+    .ml-confidence-value.rule {
+      color: #58a6ff;
+    }
+
+    .ml-confidence-value.ml {
+      color: #a371f7;
+    }
+
+    .ml-confidence-value.combined {
+      color: #3fb950;
+    }
+
+    .win-prob {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .win-prob-value {
+      font-weight: 600;
+    }
+
+    .win-prob-value.high { color: #3fb950; }
+    .win-prob-value.medium { color: #d29922; }
+    .win-prob-value.low { color: #f0883e; }
+
+    /* ML Model Performance Panel in Performance Section */
+    .ml-performance-panel {
+      background: rgba(163, 113, 247, 0.05);
+      border: 1px solid rgba(163, 113, 247, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .ml-performance-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .ml-performance-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #a371f7;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ml-performance-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .ml-stat {
+      text-align: center;
+    }
+
+    .ml-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e1e5eb;
+    }
+
+    .ml-stat-label {
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .ml-stat-value.positive { color: #3fb950; }
+    .ml-stat-value.negative { color: #f85149; }
+    .ml-stat-value.ml-color { color: #a371f7; }
+
+    /* ML Feature importance mini display */
+    .feature-importance {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .feature-tag {
+      background: rgba(88, 166, 255, 0.1);
+      color: #58a6ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+    }
+
+    @media (max-width: 1200px) {
+      .ml-performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .ml-status {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2194,6 +2406,12 @@
       <div class="status-indicator">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Connecting...</span>
+      </div>
+      <div class="ml-status" id="mlStatus">
+        <div class="ml-status-dot" id="mlStatusDot"></div>
+        <span class="ml-status-label">ML:</span>
+        <span class="ml-status-value" id="mlStatusText">Offline</span>
+        <span class="ml-version" id="mlVersion"></span>
       </div>
       <div>Symbols: <strong id="symbolCount">0</strong></div>
       <div>Last Update: <span id="lastUpdate">--:--:--</span></div>
@@ -2320,6 +2538,35 @@
           <span id="recentSignalsCount">0 signals</span>
         </div>
         <div class="signals-table" id="signalsTable"></div>
+      </div>
+
+      <!-- ML Model Performance Panel -->
+      <div class="ml-performance-panel" id="mlPerformancePanel">
+        <div class="ml-performance-header">
+          <div class="ml-performance-title">
+            <span>🤖</span> ML MODEL PERFORMANCE
+          </div>
+          <span class="ml-version" id="mlModelVersion">--</span>
+        </div>
+        <div class="ml-performance-grid">
+          <div class="ml-stat">
+            <div class="ml-stat-value ml-color" id="mlPredictedWinRate">--%</div>
+            <div class="ml-stat-label">Predicted Win Rate</div>
+          </div>
+          <div class="ml-stat">
+            <div class="ml-stat-value" id="mlActualWinRate">--%</div>
+            <div class="ml-stat-label">Actual Win Rate</div>
+          </div>
+          <div class="ml-stat">
+            <div class="ml-stat-value positive" id="mlAccuracy">--%</div>
+            <div class="ml-stat-label">Model Accuracy</div>
+          </div>
+          <div class="ml-stat">
+            <div class="ml-stat-value" id="mlSignalsCount">--</div>
+            <div class="ml-stat-label">ML Signals</div>
+          </div>
+        </div>
+        <div class="feature-importance" id="featureImportance"></div>
       </div>
     </div>
 
@@ -2820,6 +3067,17 @@
     const symbolCount = document.getElementById('symbolCount');
     const lastUpdate = document.getElementById('lastUpdate');
 
+    // ML Status Elements
+    const mlStatusDot = document.getElementById('mlStatusDot');
+    const mlStatusText = document.getElementById('mlStatusText');
+    const mlVersion = document.getElementById('mlVersion');
+    const mlModelVersion = document.getElementById('mlModelVersion');
+    const mlPredictedWinRate = document.getElementById('mlPredictedWinRate');
+    const mlActualWinRate = document.getElementById('mlActualWinRate');
+    const mlAccuracy = document.getElementById('mlAccuracy');
+    const mlSignalsCount = document.getElementById('mlSignalsCount');
+    const featureImportance = document.getElementById('featureImportance');
+
     // Filter elements
     const minVolumeFilter = document.getElementById('minVolumeFilter');
     const presetButtons = document.querySelectorAll('.filter-btn.preset');
@@ -3219,13 +3477,34 @@
       container.appendChild(div);
     }
 
+    // Helper function to create ML confidence item
+    function createMLConfidenceItem(label, value, className) {
+      const item = document.createElement('div');
+      item.className = 'ml-confidence-item';
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'ml-confidence-label';
+      labelSpan.textContent = label + ':';
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'ml-confidence-value ' + className;
+      valueSpan.textContent = value;
+      item.appendChild(labelSpan);
+      item.appendChild(valueSpan);
+      return item;
+    }
+
     // Render functions
     function renderSmartSignal(signal, container) {
       const div = document.createElement('div');
-      div.className = 'smart-item ' + signal.direction.toLowerCase();
+      let className = 'smart-item ' + signal.direction.toLowerCase();
+
+      // Add ML enhanced class if signal has ML prediction
+      if (signal.mlEnhanced) {
+        className += ' ml-enhanced';
+      }
+      div.className = className;
       div.onclick = () => openBinance(signal.symbol);
 
-      const confClass = getConfidenceClass(signal.confidence);
+      const confClass = getConfidenceClass(signal.combinedConfidence || signal.confidence);
       const riskClass = 'risk-' + signal.riskLevel.toLowerCase();
 
       const header = document.createElement('div');
@@ -3242,6 +3521,14 @@
       header.appendChild(symbolSpan);
       header.appendChild(dirSpan);
 
+      // Add quality tier badge if ML enhanced
+      if (signal.qualityTier) {
+        const tierBadge = document.createElement('span');
+        tierBadge.className = 'quality-tier-badge tier-' + signal.qualityTier.toLowerCase();
+        tierBadge.textContent = signal.qualityTier;
+        header.appendChild(tierBadge);
+      }
+
       const confDiv = document.createElement('div');
       confDiv.className = 'smart-item-confidence';
 
@@ -3249,12 +3536,14 @@
       confBar.className = 'confidence-bar';
       const confFill = document.createElement('div');
       confFill.className = 'confidence-fill ' + confClass;
-      confFill.style.width = signal.confidence + '%';
+      // Use combined confidence if available
+      const displayConf = signal.combinedConfidence || signal.confidence;
+      confFill.style.width = displayConf + '%';
       confBar.appendChild(confFill);
 
       const confText = document.createElement('span');
       confText.className = 'confidence-text';
-      confText.textContent = signal.confidence.toFixed(0) + '%';
+      confText.textContent = displayConf.toFixed(0) + '%';
 
       confDiv.appendChild(confBar);
       confDiv.appendChild(confText);
@@ -3286,6 +3575,38 @@
       div.appendChild(confDiv);
       div.appendChild(metaDiv);
       div.appendChild(reasonsDiv);
+
+      // Add ML confidence row if ML enhanced
+      if (signal.mlEnhanced && signal.mlPrediction) {
+        const mlRow = document.createElement('div');
+        mlRow.className = 'ml-confidence-row';
+
+        // Rule-based confidence
+        mlRow.appendChild(createMLConfidenceItem('Rule', signal.confidence.toFixed(0) + '%', 'rule'));
+
+        // ML confidence
+        const mlConf = (signal.mlPrediction.win_probability * 100).toFixed(0);
+        mlRow.appendChild(createMLConfidenceItem('ML', mlConf + '%', 'ml'));
+
+        // Win probability
+        const winProb = signal.mlPrediction.win_probability * 100;
+        let winProbClass = 'low';
+        if (winProb >= 70) winProbClass = 'high';
+        else if (winProb >= 55) winProbClass = 'medium';
+        const winItem = document.createElement('div');
+        winItem.className = 'win-prob';
+        const winLabel = document.createElement('span');
+        winLabel.className = 'ml-confidence-label';
+        winLabel.textContent = 'Win:';
+        const winValue = document.createElement('span');
+        winValue.className = 'win-prob-value ' + winProbClass;
+        winValue.textContent = winProb.toFixed(0) + '%';
+        winItem.appendChild(winLabel);
+        winItem.appendChild(winValue);
+        mlRow.appendChild(winItem);
+
+        div.appendChild(mlRow);
+      }
 
       container.appendChild(div);
     }
@@ -3584,6 +3905,59 @@
 
       if (stats.totalSignals !== undefined) {
         totalSignalsEl.textContent = stats.totalSignals;
+      }
+    }
+
+    // Update ML Status display
+    function updateMLStatus(mlStatus, mlFeatureCounts) {
+      if (!mlStatus) return;
+
+      // Update ML status badge in header
+      if (mlStatus.serviceAvailable && mlStatus.enabled) {
+        mlStatusDot.className = 'ml-status-dot active';
+        mlStatusText.textContent = 'Active';
+        if (mlStatus.modelVersion) {
+          mlVersion.textContent = '(v' + mlStatus.modelVersion + ')';
+        }
+      } else if (mlStatus.enabled) {
+        mlStatusDot.className = 'ml-status-dot inactive';
+        mlStatusText.textContent = 'Offline';
+        mlVersion.textContent = '';
+      } else {
+        mlStatusDot.className = 'ml-status-dot inactive';
+        mlStatusText.textContent = 'Disabled';
+        mlVersion.textContent = '';
+      }
+
+      // Update ML performance panel
+      if (mlStatus.modelVersion && mlModelVersion) {
+        mlModelVersion.textContent = 'v' + mlStatus.modelVersion;
+      }
+
+      // Update signals count from feature counts
+      if (mlFeatureCounts && mlSignalsCount) {
+        const total = (mlFeatureCounts.total || 0);
+        const withOutcome = (mlFeatureCounts.withOutcome || 0);
+        mlSignalsCount.textContent = withOutcome + '/' + total;
+      }
+    }
+
+    // Update ML accuracy stats (called separately via API or socket)
+    function updateMLAccuracyStats(stats) {
+      if (!stats) return;
+
+      if (stats.predictedWinRate !== undefined && mlPredictedWinRate) {
+        mlPredictedWinRate.textContent = stats.predictedWinRate.toFixed(1) + '%';
+      }
+
+      if (stats.actualWinRate !== undefined && mlActualWinRate) {
+        mlActualWinRate.textContent = stats.actualWinRate.toFixed(1) + '%';
+        mlActualWinRate.className = 'ml-stat-value ' + (stats.actualWinRate >= 50 ? 'positive' : 'negative');
+      }
+
+      if (stats.accuracy !== undefined && mlAccuracy) {
+        mlAccuracy.textContent = stats.accuracy.toFixed(1) + '%';
+        mlAccuracy.className = 'ml-stat-value ' + (stats.accuracy >= 70 ? 'positive' : stats.accuracy >= 50 ? '' : 'negative');
       }
     }
 
@@ -4141,6 +4515,11 @@
 
       // Update Performance Tracking Panel
       updatePerformancePanel(data.winRateStats, data.recentSignals);
+
+      // Update ML Status
+      if (data.mlStatus) {
+        updateMLStatus(data.mlStatus, data.mlFeatureCounts);
+      }
 
       // Handle Notifications
       if (data.notifications && data.notifications.length > 0) {

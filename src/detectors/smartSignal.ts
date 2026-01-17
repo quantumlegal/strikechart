@@ -5,11 +5,12 @@ import { MultiTimeframeDetector, MTFAlert } from './multiTimeframe.js';
 import { VolatilityDetector } from './volatility.js';
 import { VolumeDetector } from './volume.js';
 import { VelocityDetector } from './velocity.js';
+import { MLPrediction } from '../storage/sqlite.js';
 
 export interface SmartSignal {
   symbol: string;
   direction: 'LONG' | 'SHORT' | 'NEUTRAL';
-  confidence: number; // 0-100
+  confidence: number; // 0-100 (rule-based)
   confluenceScore: number; // 0-100
   signals: SignalComponent[];
   reasoning: string[];
@@ -17,6 +18,12 @@ export interface SmartSignal {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   price: number;
   timestamp: number;
+
+  // ML Enhancement fields
+  mlPrediction?: MLPrediction;
+  combinedConfidence?: number; // ML + rule-based combined
+  mlEnhanced?: boolean;
+  qualityTier?: 'HIGH' | 'MEDIUM' | 'LOW' | 'FILTER';
 }
 
 export interface SignalComponent {
@@ -52,6 +59,14 @@ export class SmartSignalEngine {
   private priceHistory: Map<string, number[]> = new Map();
   private rsiHistory: Map<string, number[]> = new Map();
 
+  // ML integration
+  private mlClient: any = null; // MLServiceClient
+  private featureExtractor: any = null; // FeatureExtractor
+  private mlEnabled: boolean = false;
+  private mlWeight: number = 0.6;
+  private ruleWeight: number = 0.4;
+  private filterThreshold: number = 0.40;
+
   constructor(
     dataStore: DataStore,
     fundingDetector: FundingDetector,
@@ -68,6 +83,80 @@ export class SmartSignalEngine {
     this.volatilityDetector = volatilityDetector;
     this.volumeDetector = volumeDetector;
     this.velocityDetector = velocityDetector;
+  }
+
+  // Set ML client for ML-enhanced signals
+  setMLClient(mlClient: any, featureExtractor: any, config: { mlWeight: number; ruleWeight: number; filterThreshold: number }): void {
+    this.mlClient = mlClient;
+    this.featureExtractor = featureExtractor;
+    this.mlWeight = config.mlWeight;
+    this.ruleWeight = config.ruleWeight;
+    this.filterThreshold = config.filterThreshold;
+    this.mlEnabled = true;
+    console.log('[SmartSignalEngine] ML integration enabled');
+  }
+
+  // Calculate combined confidence from ML and rule-based scores
+  calculateCombinedConfidence(mlWinProb: number, ruleConfidence: number): number {
+    const mlScore = mlWinProb * 100;
+    let combined = (mlScore * this.mlWeight) + (ruleConfidence * this.ruleWeight);
+
+    // Boost if both agree strongly
+    if ((mlScore > 60 && ruleConfidence > 60) || (mlScore < 40 && ruleConfidence < 40)) {
+      combined *= 1.1;
+    }
+
+    // Penalty if they disagree significantly
+    if (Math.abs(mlScore - ruleConfidence) > 30) {
+      combined *= 0.9;
+    }
+
+    return Math.min(100, Math.max(0, combined));
+  }
+
+  // Enhance signal with ML prediction
+  async enhanceWithML(signal: SmartSignal): Promise<SmartSignal> {
+    if (!this.mlEnabled || !this.mlClient || !this.featureExtractor) {
+      return signal;
+    }
+
+    try {
+      // Check if ML service is available
+      const isAvailable = await this.mlClient.checkHealth();
+      if (!isAvailable) {
+        return signal;
+      }
+
+      // Generate a signal ID for this prediction
+      const signalId = `sig_${Date.now()}_${signal.symbol}`;
+
+      // Extract features
+      const features = this.featureExtractor.extractFeatures(signal, signalId);
+
+      // Get ML prediction
+      const prediction = await this.mlClient.predict(features);
+      if (!prediction) {
+        return signal;
+      }
+
+      // Calculate combined confidence
+      const combinedConfidence = this.calculateCombinedConfidence(
+        prediction.win_probability,
+        signal.confidence
+      );
+
+      // Enhance signal with ML data
+      return {
+        ...signal,
+        mlPrediction: prediction,
+        combinedConfidence,
+        mlEnhanced: true,
+        qualityTier: prediction.quality_tier,
+      };
+    } catch (error) {
+      console.warn('[SmartSignalEngine] ML enhancement failed:', error);
+      return signal;
+    }
   }
 
   async analyze(): Promise<void> {

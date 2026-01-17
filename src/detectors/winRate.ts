@@ -1,4 +1,5 @@
 import { DataStore } from '../core/dataStore.js';
+import { StorageManager, SignalFeatures, MLPrediction } from '../storage/sqlite.js';
 
 export interface SignalRecord {
   id: string;
@@ -11,6 +12,8 @@ export interface SignalRecord {
   outcome?: 'WIN' | 'LOSS' | 'PENDING';
   exitPrice?: number;
   pnlPercent?: number;
+  features?: SignalFeatures; // ML features
+  mlPrediction?: MLPrediction; // ML prediction result
 }
 
 export interface WinRateStats {
@@ -34,6 +37,7 @@ export class WinRateTracker {
   private completedSignals: SignalRecord[] = [];
   private maxStoredSignals: number = 500;
   private evaluationTimeMs: number = 15 * 60 * 1000; // 15 minutes
+  private storageManager: StorageManager | null = null;
 
   constructor(
     private dataStore: DataStore,
@@ -43,12 +47,22 @@ export class WinRateTracker {
     this.loadFromStorage();
   }
 
+  // Set storage manager for persistence (called after StorageManager is initialized)
+  setStorageManager(storageManager: StorageManager): void {
+    this.storageManager = storageManager;
+    this.loadFromStorage();
+  }
+
   private loadFromStorage(): void {
-    // In-memory only for now, could add SQLite later
+    // Load pending signals count for stats (actual data stays in SQLite)
+    if (this.storageManager) {
+      const counts = this.storageManager.getSignalFeaturesCount();
+      console.log(`[WinRateTracker] Loaded from storage: ${counts.completed} completed, ${counts.pending} pending signals`);
+    }
   }
 
   private saveToStorage(): void {
-    // In-memory only for now
+    // No-op: we save immediately when recording/updating signals
   }
 
   private generateId(): string {
@@ -60,7 +74,9 @@ export class WinRateTracker {
     entryType: string,
     direction: 'LONG' | 'SHORT',
     entryPrice: number,
-    confidence: number
+    confidence: number,
+    features?: SignalFeatures,
+    mlPrediction?: MLPrediction
   ): string {
     const id = this.generateId();
     const record: SignalRecord = {
@@ -72,10 +88,69 @@ export class WinRateTracker {
       confidence,
       timestamp: Date.now(),
       outcome: 'PENDING',
+      features,
+      mlPrediction,
     };
 
     this.signals.set(id, record);
+
+    // Persist features to SQLite if available
+    if (this.storageManager && features) {
+      // Update the signal_id in features to match
+      const featuresWithId = { ...features, signal_id: id };
+      this.storageManager.saveSignalFeatures(featuresWithId);
+
+      // Also save ML prediction if available
+      if (mlPrediction) {
+        this.storageManager.updateSignalMLPrediction(id, mlPrediction);
+      }
+    }
+
     return id;
+  }
+
+  // Record signal with pre-generated ID (useful when features are extracted beforehand)
+  recordSignalWithId(
+    id: string,
+    symbol: string,
+    entryType: string,
+    direction: 'LONG' | 'SHORT',
+    entryPrice: number,
+    confidence: number,
+    features?: SignalFeatures,
+    mlPrediction?: MLPrediction
+  ): void {
+    const record: SignalRecord = {
+      id,
+      symbol,
+      entryType,
+      direction,
+      entryPrice,
+      confidence,
+      timestamp: Date.now(),
+      outcome: 'PENDING',
+      features,
+      mlPrediction,
+    };
+
+    this.signals.set(id, record);
+
+    // Features should already be saved by caller, but save ML prediction
+    if (this.storageManager && mlPrediction) {
+      this.storageManager.updateSignalMLPrediction(id, mlPrediction);
+    }
+  }
+
+  // Update ML prediction for an existing signal
+  updateMLPrediction(signalId: string, prediction: MLPrediction): void {
+    const signal = this.signals.get(signalId);
+    if (signal) {
+      signal.mlPrediction = prediction;
+    }
+
+    if (this.storageManager) {
+      this.storageManager.updateSignalMLPrediction(signalId, prediction);
+    }
   }
 
   evaluatePendingSignals(): void {
@@ -109,6 +184,11 @@ export class WinRateTracker {
       signal.exitPrice = currentPrice;
       signal.pnlPercent = pnlPercent;
 
+      // Persist outcome to SQLite
+      if (this.storageManager) {
+        this.storageManager.updateSignalOutcome(id, outcome, pnlPercent);
+      }
+
       // Move to completed
       this.completedSignals.push(signal);
       this.signals.delete(id);
@@ -120,6 +200,44 @@ export class WinRateTracker {
     }
 
     this.saveToStorage();
+  }
+
+  // Get feature counts from storage (for ML training readiness)
+  getFeatureCounts(): { total: number; completed: number; wins: number; losses: number; pending: number } {
+    if (this.storageManager) {
+      return this.storageManager.getSignalFeaturesCount();
+    }
+    return { total: 0, completed: 0, wins: 0, losses: 0, pending: 0 };
+  }
+
+  // Check if we have enough data for ML training
+  hasEnoughDataForTraining(minSignals: number = 500): boolean {
+    const counts = this.getFeatureCounts();
+    return counts.completed >= minSignals;
+  }
+
+  // Get training data from storage
+  getTrainingData(limit: number = 5000): SignalFeatures[] {
+    if (this.storageManager) {
+      return this.storageManager.getCompletedSignalsForTraining(limit);
+    }
+    return [];
+  }
+
+  // Export training data as CSV for external analysis
+  exportTrainingDataCSV(): string {
+    if (this.storageManager) {
+      return this.storageManager.exportTrainingDataAsCSV();
+    }
+    return '';
+  }
+
+  // Get ML accuracy stats from storage
+  getMLAccuracyStats(): { predicted: number; actual: number; modelCount: number } {
+    if (this.storageManager) {
+      return this.storageManager.getMLAccuracyStats();
+    }
+    return { predicted: 0, actual: 0, modelCount: 0 };
   }
 
   private calculateStats(signals: SignalRecord[]): WinRateStats {

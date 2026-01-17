@@ -21,6 +21,9 @@ import { WinRateTracker } from '../detectors/winRate.js';
 import { NotificationManager } from '../detectors/notifications.js';
 import { TopPicker } from '../detectors/topPicker.js';
 import { ConnectionStatus } from '../binance/types.js';
+import { StorageManager } from '../storage/sqlite.js';
+import { MLServiceClient } from '../services/mlClient.js';
+import { FeatureExtractor } from '../services/featureExtractor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +53,11 @@ export class WebServer {
   private winRateTracker: WinRateTracker;
   private notificationManager: NotificationManager;
   private topPicker: TopPicker;
+
+  // ML Integration
+  private storageManager: StorageManager | null = null;
+  private mlClient: MLServiceClient;
+  private featureExtractor: FeatureExtractor | null = null;
 
   constructor(
     private dataStore: DataStore,
@@ -105,8 +113,48 @@ export class WebServer {
       this.whaleDetector
     );
 
+    // Initialize ML client
+    this.mlClient = new MLServiceClient(
+      config.ml.serviceUrl,
+      config.ml.timeout,
+      config.ml.enabled
+    );
+
     this.setupRoutes();
     this.setupSocketIO();
+  }
+
+  // Initialize storage and ML integration (call after storage manager is ready)
+  async initializeML(storageManager: StorageManager): Promise<void> {
+    this.storageManager = storageManager;
+
+    // Set storage manager on win rate tracker
+    this.winRateTracker.setStorageManager(storageManager);
+
+    // Initialize feature extractor
+    this.featureExtractor = new FeatureExtractor(
+      this.dataStore,
+      this.fundingDetector,
+      this.oiDetector,
+      this.mtfDetector,
+      this.opportunityRanker.getVolumeDetector(),
+      this.opportunityRanker.getVelocityDetector(),
+      this.patternDetector,
+      this.entryCalculator,
+      this.whaleDetector,
+      this.correlationDetector
+    );
+
+    // Setup ML integration in SmartSignalEngine
+    if (config.ml.enabled) {
+      this.smartSignalEngine.setMLClient(this.mlClient, this.featureExtractor, {
+        mlWeight: config.ml.mlWeight,
+        ruleWeight: config.ml.ruleWeight,
+        filterThreshold: config.ml.filterThreshold,
+      });
+    }
+
+    console.log('[WebServer] ML integration initialized');
   }
 
   private setupRoutes(): void {
@@ -218,6 +266,85 @@ export class WebServer {
           timestamp: s.timestamp
         }))
       });
+    });
+
+    // ============== ML API Endpoints ==============
+
+    // ML service status
+    this.app.get('/api/ml/status', async (req, res) => {
+      const status = this.mlClient.getStatus();
+      const featureCounts = this.winRateTracker.getFeatureCounts();
+
+      res.json({
+        ...status,
+        signalCount: featureCounts.total,
+        completedSignals: featureCounts.completed,
+        readyForTraining: this.winRateTracker.hasEnoughDataForTraining(config.ml.minSignalsForTraining),
+        minSignalsForTraining: config.ml.minSignalsForTraining,
+      });
+    });
+
+    // ML model statistics
+    this.app.get('/api/ml/stats', async (req, res) => {
+      try {
+        const stats = await this.mlClient.getStats();
+        const accuracyStats = this.winRateTracker.getMLAccuracyStats();
+
+        res.json({
+          model: stats,
+          accuracy: accuracyStats,
+        });
+      } catch (error) {
+        res.json({
+          model: null,
+          accuracy: this.winRateTracker.getMLAccuracyStats(),
+          error: 'Failed to get ML stats',
+        });
+      }
+    });
+
+    // Trigger ML training
+    this.app.post('/api/ml/train', async (req, res) => {
+      if (!this.winRateTracker.hasEnoughDataForTraining(config.ml.minSignalsForTraining)) {
+        res.status(400).json({
+          error: 'Not enough training data',
+          required: config.ml.minSignalsForTraining,
+          current: this.winRateTracker.getFeatureCounts().completed,
+        });
+        return;
+      }
+
+      try {
+        const trainingData = this.winRateTracker.getTrainingData(5000);
+        const result = await this.mlClient.triggerTraining(trainingData);
+
+        if (result) {
+          res.json(result);
+        } else {
+          res.status(500).json({ error: 'Training failed' });
+        }
+      } catch (error) {
+        res.status(500).json({ error: 'Training error: ' + (error as Error).message });
+      }
+    });
+
+    // Export training data as CSV
+    this.app.get('/api/ml/export-csv', (req, res) => {
+      const csv = this.winRateTracker.exportTrainingDataCSV();
+
+      if (!csv) {
+        res.status(404).json({ error: 'No training data available' });
+        return;
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=training_data.csv');
+      res.send(csv);
+    });
+
+    // Feature counts for training data
+    this.app.get('/api/ml/feature-counts', (req, res) => {
+      res.json(this.winRateTracker.getFeatureCounts());
     });
   }
 
@@ -374,6 +501,10 @@ export class WebServer {
       // Current filters
       filters: this.filterManager.getConfig(),
       watchlist: this.filterManager.getWatchlist(),
+
+      // ML Status
+      mlStatus: this.mlClient.getStatus(),
+      mlFeatureCounts: this.winRateTracker.getFeatureCounts(),
     };
 
     this.io.emit('update', data);
