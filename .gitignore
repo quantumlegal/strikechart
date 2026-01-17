@@ -6,3 +6,4 @@ data/
 .env.production
 *.log
 .DS_Store
+strikechart_deploy.zip
