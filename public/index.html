@@ -1948,6 +1948,10 @@
       color: #f85149;
     }
 
+    .performance-stat-value.pending {
+      color: #d29922;
+    }
+
     .performance-stat-label {
       font-size: 10px;
       color: #8b949e;
@@ -2257,6 +2261,10 @@
         <div class="performance-stat">
           <div class="performance-stat-value negative" id="perfLosses">--</div>
           <div class="performance-stat-label">Losses</div>
+        </div>
+        <div class="performance-stat">
+          <div class="performance-stat-value pending" id="perfPending">--</div>
+          <div class="performance-stat-label">Pending</div>
         </div>
         <div class="performance-stat">
           <div class="performance-stat-value" id="perfAvgWin">--%</div>
@@ -2976,6 +2984,12 @@
         perfLosses.textContent = stats.losses;
       }
 
+      // Update pending count
+      const perfPending = document.getElementById('perfPending');
+      if (stats.pending !== undefined && perfPending) {
+        perfPending.textContent = stats.pending;
+      }
+
       if (stats.avgWinPercent !== undefined) {
         perfAvgWin.textContent = '+' + stats.avgWinPercent.toFixed(2) + '%';
         perfAvgWin.className = 'performance-stat-value positive';
@@ -2993,7 +3007,8 @@
       if (stats.byType && typePerformance) {
         typePerformance.innerHTML = '';
         Object.entries(stats.byType).forEach(([type, typeStats]) => {
-          if (typeStats.totalSignals > 0) {
+          // Show if there are completed OR pending signals
+          if (typeStats.totalSignals > 0 || typeStats.pending > 0) {
             const typeStat = document.createElement('div');
             typeStat.className = 'type-stat';
 
@@ -3002,8 +3017,14 @@
             label.textContent = type + ':';
 
             const value = document.createElement('span');
-            value.className = 'type-stat-value ' + (typeStats.winRate >= 50 ? 'positive' : 'negative');
-            value.textContent = typeStats.winRate.toFixed(0) + '% (' + typeStats.totalSignals + ')';
+            if (typeStats.totalSignals > 0) {
+              value.className = 'type-stat-value ' + (typeStats.winRate >= 50 ? 'positive' : 'negative');
+              value.textContent = typeStats.winRate.toFixed(0) + '% (' + typeStats.totalSignals + ')';
+            } else {
+              // Only pending signals
+              value.className = 'type-stat-value pending';
+              value.textContent = typeStats.pending + ' pending';
+            }
 
             typeStat.appendChild(label);
             typeStat.appendChild(value);
