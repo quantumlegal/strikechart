@@ -5,6 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Signal Sense Hunter - Binance Futures Volatility Hunter</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Production Security Module
+    (function() {
+      'use strict';
+
+      // Check if in production (loaded via HTTPS or specific domain)
+      const isProduction = location.protocol === 'https:' ||
+                          location.hostname === 'signalsense.trade' ||
+                          location.hostname === 'www.signalsense.trade';
+
+      if (isProduction) {
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          return false;
+        });
+
+        // Disable keyboard shortcuts for devtools
+        document.addEventListener('keydown', function(e) {
+          // F12
+          if (e.key === 'F12') {
+            e.preventDefault();
+            return false;
+          }
+          // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+          if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) {
+            e.preventDefault();
+            return false;
+          }
+          // Ctrl+U (view source)
+          if (e.ctrlKey && e.key.toUpperCase() === 'U') {
+            e.preventDefault();
+            return false;
+          }
+        });
+
+        // Disable console methods
+        const noop = function() {};
+        const methods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml', 'group', 'groupEnd', 'time', 'timeEnd', 'assert', 'count', 'clear'];
+        methods.forEach(function(method) {
+          console[method] = noop;
+        });
+
+        // DevTools detection via debugger timing
+        let devtoolsOpen = false;
+        const threshold = 160;
+
+        setInterval(function() {
+          const start = performance.now();
+          debugger;
+          const end = performance.now();
+          if (end - start > threshold) {
+            if (!devtoolsOpen) {
+              devtoolsOpen = true;
+              document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e17;color:#f85149;font-family:sans-serif;font-size:24px;text-align:center;padding:20px;">Developer tools detected.<br>Please close them to continue.</div>';
+            }
+          }
+        }, 1000);
+
+        // Disable text selection on sensitive elements
+        document.addEventListener('DOMContentLoaded', function() {
+          document.body.style.userSelect = 'none';
+          document.body.style.webkitUserSelect = 'none';
+        });
+      }
+    })();
+  </script>
   <style>
     * {
       margin: 0;
@@ -981,6 +1048,150 @@
       background: #484f58;
     }
 
+    /* Skeleton Loader Styles */
+    .skeleton {
+      background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      background: #0d1117;
+      border-radius: 6px;
+    }
+
+    .skeleton-item .skeleton-symbol {
+      width: 80px;
+      height: 14px;
+    }
+
+    .skeleton-item .skeleton-value {
+      width: 60px;
+      height: 14px;
+    }
+
+    .skeleton-smart-item {
+      padding: 10px 12px;
+      background: #0d1117;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #30363d;
+    }
+
+    .skeleton-smart-item .skeleton-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-smart-item .skeleton-symbol {
+      width: 100px;
+      height: 16px;
+    }
+
+    .skeleton-smart-item .skeleton-badge {
+      width: 50px;
+      height: 16px;
+    }
+
+    .skeleton-smart-item .skeleton-bar {
+      width: 100%;
+      height: 6px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-smart-item .skeleton-meta {
+      display: flex;
+      gap: 6px;
+    }
+
+    .skeleton-smart-item .skeleton-tag {
+      width: 60px;
+      height: 18px;
+    }
+
+    /* Drag and Drop Styles */
+    .panel.draggable {
+      cursor: grab;
+    }
+
+    .panel.draggable:active {
+      cursor: grabbing;
+    }
+
+    .panel.dragging {
+      opacity: 0.5;
+      transform: scale(1.02);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+    }
+
+    .panel.drag-over {
+      border: 2px dashed #d29922;
+      background: rgba(210, 153, 34, 0.1);
+    }
+
+    .panel-header.drag-handle {
+      cursor: grab;
+    }
+
+    .panel-header.drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .drag-placeholder {
+      border: 2px dashed #30363d;
+      background: rgba(48, 54, 61, 0.3);
+      border-radius: 10px;
+      min-height: 200px;
+    }
+
+    /* Layout customization indicator */
+    .layout-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .reset-layout-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .reset-layout-btn:hover {
+      background: #30363d;
+      color: #e1e5eb;
+    }
+
+    .layout-indicator {
+      font-size: 11px;
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .layout-indicator.modified {
+      color: #d29922;
+    }
+
     /* Responsive */
     @media (max-width: 1600px) {
       .smart-signals-section {
@@ -1046,6 +1257,12 @@
     <div class="filter-group" style="margin-left: auto;">
       <span class="filter-label">View:</span>
       <button class="filter-btn view-toggle" id="viewToggle" data-view="cards">Compact</button>
+    </div>
+    <div class="layout-controls">
+      <span class="layout-indicator" id="layoutIndicator">
+        <span>📐</span> Drag panels to rearrange
+      </span>
+      <button class="reset-layout-btn" id="resetLayoutBtn" style="display: none;">Reset Layout</button>
     </div>
   </div>
 
@@ -2438,6 +2655,262 @@
 
     // Set default filter to ALL on page load
     fetch('/api/filters/preset/all', { method: 'POST' });
+
+    // ============================================
+    // SKELETON LOADER MODULE
+    // ============================================
+    const SkeletonLoader = {
+      // Generate skeleton items for basic panels
+      createBasicSkeletons: function(count) {
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          html += '<div class="skeleton-item"><div class="skeleton skeleton-symbol"></div><div class="skeleton skeleton-value"></div></div>';
+        }
+        return html;
+      },
+
+      // Generate skeleton items for smart signal panels
+      createSmartSkeletons: function(count) {
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          html += '<div class="skeleton-smart-item">' +
+            '<div class="skeleton-header"><div class="skeleton skeleton-symbol"></div><div class="skeleton skeleton-badge"></div></div>' +
+            '<div class="skeleton skeleton-bar"></div>' +
+            '<div class="skeleton-meta"><div class="skeleton skeleton-tag"></div><div class="skeleton skeleton-tag"></div><div class="skeleton skeleton-tag"></div></div>' +
+            '</div>';
+        }
+        return html;
+      },
+
+      // Show skeletons in all panels
+      showAll: function() {
+        // Smart signal panels
+        const smartPanels = ['smartLongPanel', 'smartShortPanel', 'reversalPanel', 'earlyEntriesPanel', 'breakoutPanel', 'lowRiskPanel'];
+        smartPanels.forEach(function(id) {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = SkeletonLoader.createSmartSkeletons(3);
+        });
+
+        // Basic panels
+        const basicPanels = ['topMoversPanel', 'velocityPanel', 'volumePanel', 'convictionPanel', 'fundingPanel', 'squeezePanel', 'oiPanel', 'mtfPanel', 'rsiPanel', 'divergencePanel', 'liquidationPanel', 'whalePanel', 'correlationPanel', 'patternPanel', 'entryLongPanel', 'entryShortPanel'];
+        basicPanels.forEach(function(id) {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = SkeletonLoader.createBasicSkeletons(4);
+        });
+
+        // Top picks
+        if (topLongPicks) topLongPicks.innerHTML = SkeletonLoader.createSmartSkeletons(2);
+        if (topShortPicks) topShortPicks.innerHTML = SkeletonLoader.createSmartSkeletons(2);
+      }
+    };
+
+    // Show skeletons on initial load
+    SkeletonLoader.showAll();
+
+    // ============================================
+    // DRAG AND DROP MODULE
+    // ============================================
+    const DragDropManager = {
+      draggedElement: null,
+      originalIndex: -1,
+      layoutModified: false,
+
+      init: function() {
+        // Wait for DOM to be ready
+        setTimeout(function() {
+          DragDropManager.setupPanels();
+          DragDropManager.restoreLayout();
+        }, 100);
+      },
+
+      setupPanels: function() {
+        // Get all panel grids
+        const panelGrids = document.querySelectorAll('.panels-grid, .smart-signals-section');
+
+        panelGrids.forEach(function(grid) {
+          const panels = grid.querySelectorAll('.panel');
+
+          panels.forEach(function(panel, index) {
+            // Add draggable attributes
+            panel.classList.add('draggable');
+            panel.setAttribute('draggable', 'true');
+            panel.dataset.originalIndex = index;
+            panel.dataset.gridId = grid.className;
+
+            // Drag start
+            panel.addEventListener('dragstart', function(e) {
+              DragDropManager.draggedElement = panel;
+              DragDropManager.originalIndex = index;
+              panel.classList.add('dragging');
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', index.toString());
+            });
+
+            // Drag end
+            panel.addEventListener('dragend', function(e) {
+              panel.classList.remove('dragging');
+              document.querySelectorAll('.panel.drag-over').forEach(function(p) {
+                p.classList.remove('drag-over');
+              });
+              DragDropManager.draggedElement = null;
+            });
+
+            // Drag over
+            panel.addEventListener('dragover', function(e) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (panel !== DragDropManager.draggedElement) {
+                panel.classList.add('drag-over');
+              }
+            });
+
+            // Drag leave
+            panel.addEventListener('dragleave', function(e) {
+              panel.classList.remove('drag-over');
+            });
+
+            // Drop
+            panel.addEventListener('drop', function(e) {
+              e.preventDefault();
+              panel.classList.remove('drag-over');
+
+              if (DragDropManager.draggedElement && panel !== DragDropManager.draggedElement) {
+                // Get parent grid
+                const parentGrid = panel.parentNode;
+
+                // Get positions
+                const allPanels = Array.from(parentGrid.querySelectorAll('.panel'));
+                const draggedIndex = allPanels.indexOf(DragDropManager.draggedElement);
+                const targetIndex = allPanels.indexOf(panel);
+
+                // Swap positions in DOM
+                if (draggedIndex < targetIndex) {
+                  parentGrid.insertBefore(DragDropManager.draggedElement, panel.nextSibling);
+                } else {
+                  parentGrid.insertBefore(DragDropManager.draggedElement, panel);
+                }
+
+                // Mark layout as modified
+                DragDropManager.layoutModified = true;
+                DragDropManager.saveLayout();
+                DragDropManager.updateIndicator();
+              }
+            });
+          });
+        });
+
+        // Setup reset button
+        const resetBtn = document.getElementById('resetLayoutBtn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', function() {
+            DragDropManager.resetLayout();
+          });
+        }
+      },
+
+      saveLayout: function() {
+        const layout = {};
+        const grids = document.querySelectorAll('.panels-grid, .smart-signals-section');
+
+        grids.forEach(function(grid, gridIndex) {
+          const panels = grid.querySelectorAll('.panel');
+          const order = [];
+          panels.forEach(function(panel) {
+            // Use panel title as identifier
+            const titleEl = panel.querySelector('.panel-title');
+            if (titleEl) {
+              order.push(titleEl.textContent.trim());
+            }
+          });
+          layout['grid_' + gridIndex] = order;
+        });
+
+        sessionStorage.setItem('signalsense_layout', JSON.stringify(layout));
+        sessionStorage.setItem('signalsense_layout_modified', 'true');
+      },
+
+      restoreLayout: function() {
+        const savedLayout = sessionStorage.getItem('signalsense_layout');
+        const isModified = sessionStorage.getItem('signalsense_layout_modified') === 'true';
+
+        if (!savedLayout || !isModified) return;
+
+        try {
+          const layout = JSON.parse(savedLayout);
+          const grids = document.querySelectorAll('.panels-grid, .smart-signals-section');
+
+          grids.forEach(function(grid, gridIndex) {
+            const savedOrder = layout['grid_' + gridIndex];
+            if (!savedOrder) return;
+
+            const panels = Array.from(grid.querySelectorAll('.panel'));
+            const panelMap = {};
+
+            // Create map of title -> panel
+            panels.forEach(function(panel) {
+              const titleEl = panel.querySelector('.panel-title');
+              if (titleEl) {
+                panelMap[titleEl.textContent.trim()] = panel;
+              }
+            });
+
+            // Reorder panels based on saved order
+            savedOrder.forEach(function(title) {
+              const panel = panelMap[title];
+              if (panel) {
+                grid.appendChild(panel);
+              }
+            });
+          });
+
+          DragDropManager.layoutModified = true;
+          DragDropManager.updateIndicator();
+        } catch (e) {
+          // Silently fail if layout can't be restored
+        }
+      },
+
+      resetLayout: function() {
+        sessionStorage.removeItem('signalsense_layout');
+        sessionStorage.removeItem('signalsense_layout_modified');
+        DragDropManager.layoutModified = false;
+        DragDropManager.updateIndicator();
+        // Reload page to restore original order
+        location.reload();
+      },
+
+      updateIndicator: function() {
+        const indicator = document.getElementById('layoutIndicator');
+        const resetBtn = document.getElementById('resetLayoutBtn');
+
+        if (DragDropManager.layoutModified) {
+          if (indicator) {
+            indicator.classList.add('modified');
+            indicator.innerHTML = '<span>✨</span> Layout customized';
+          }
+          if (resetBtn) {
+            resetBtn.style.display = 'inline-block';
+          }
+        } else {
+          if (indicator) {
+            indicator.classList.remove('modified');
+            indicator.innerHTML = '<span>📐</span> Drag panels to rearrange';
+          }
+          if (resetBtn) {
+            resetBtn.style.display = 'none';
+          }
+        }
+      }
+    };
+
+    // Initialize drag and drop
+    DragDropManager.init();
+
+    // Check if layout was previously modified
+    if (sessionStorage.getItem('signalsense_layout_modified') === 'true') {
+      DragDropManager.layoutModified = true;
+      DragDropManager.updateIndicator();
+    }
   </script>
 </body>
 </html>
