@@ -1242,7 +1242,147 @@
       color: #d29922;
     }
 
-    /* Responsive */
+    /* ============================================ */
+    /* CONNECTION STATUS OVERLAY                   */
+    /* ============================================ */
+    .connection-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 14, 23, 0.95);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      backdrop-filter: blur(5px);
+    }
+
+    .connection-overlay.visible {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .connection-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #30363d;
+      border-top-color: #d29922;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .connection-message {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e1e5eb;
+    }
+
+    .connection-submessage {
+      font-size: 14px;
+      color: #8b949e;
+      text-align: center;
+      max-width: 300px;
+    }
+
+    .connection-retry-count {
+      font-size: 12px;
+      color: #8b949e;
+      padding: 6px 12px;
+      background: #21262d;
+      border-radius: 20px;
+    }
+
+    /* Connection Status Banner (top bar) */
+    .connection-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 20px;
+      background: linear-gradient(90deg, #da3633, #f85149);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+
+    .connection-banner.visible {
+      display: flex;
+      transform: translateY(0);
+    }
+
+    .connection-banner.reconnecting {
+      background: linear-gradient(90deg, #9e6a03, #d29922);
+    }
+
+    .connection-banner.connected {
+      background: linear-gradient(90deg, #238636, #3fb950);
+    }
+
+    .banner-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    /* Pulse animation for status dot */
+    .status-dot.disconnected {
+      background: #f85149;
+      animation: pulse-red 1.5s ease infinite;
+    }
+
+    .status-dot.reconnecting {
+      background: #d29922;
+      animation: pulse-yellow 1s ease infinite;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
+    }
+
+    @keyframes pulse-yellow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(210, 153, 34, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(210, 153, 34, 0); }
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+      50% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.8); }
+    }
+
+    .status-dot.connected {
+      animation: pulse-green 2s ease infinite;
+    }
+
+    /* ============================================ */
+    /* MOBILE RESPONSIVE STYLES                    */
+    /* ============================================ */
+
+    /* Large Desktop (1600px and below) */
     @media (max-width: 1600px) {
       .smart-signals-section {
         grid-template-columns: repeat(2, 1fr);
@@ -1252,6 +1392,7 @@
       }
     }
 
+    /* Desktop (1200px and below) */
     @media (max-width: 1200px) {
       .smart-signals-section {
         grid-template-columns: 1fr;
@@ -1259,16 +1400,319 @@
       .panels-grid {
         grid-template-columns: repeat(2, 1fr);
       }
+      .top-picks-grid {
+        grid-template-columns: 1fr;
+      }
+      .sentiment-bar {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .stats-section {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
     }
 
+    /* Tablet (1024px and below) */
+    @media (max-width: 1024px) {
+      .header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 15px;
+      }
+      .logo {
+        flex-direction: column;
+        text-align: center;
+        gap: 4px;
+      }
+      .logo h1 {
+        font-size: 18px;
+      }
+      .status-bar {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .filter-bar {
+        padding: 10px 15px;
+        justify-content: center;
+      }
+      .filter-group {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .layout-controls {
+        width: 100%;
+        justify-content: center;
+        margin-top: 5px;
+      }
+      .main-container {
+        padding: 10px;
+      }
+      .panel-content {
+        max-height: 250px;
+      }
+    }
+
+    /* Mobile Landscape / Small Tablet (768px and below) */
     @media (max-width: 768px) {
       .panels-grid {
         grid-template-columns: 1fr;
+      }
+      .header {
+        position: relative;
+        top: auto;
+      }
+      .logo h1 {
+        font-size: 16px;
+      }
+      .logo span {
+        font-size: 10px !important;
+      }
+      .filter-bar {
+        gap: 8px;
+      }
+      .filter-select, .filter-input {
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      .filter-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      .sentiment-bar {
+        padding: 10px 15px;
+      }
+      .sentiment-meter {
+        width: 120px;
+      }
+      .sentiment-section {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .top-picks-section {
+        margin: 0 0 10px 0;
+      }
+      .top-picks-header {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+      }
+      .panel-header {
+        padding: 10px 12px;
+      }
+      .panel-title {
+        font-size: 12px;
+      }
+      .notification-container {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+      }
+      .smart-item {
+        padding: 8px 10px;
+      }
+      .smart-item-symbol {
+        font-size: 13px;
+      }
+      .pick-item {
+        padding: 8px 10px;
+      }
+      .pick-symbol {
+        font-size: 13px;
+      }
+      /* Disable drag on mobile */
+      .panel {
+        cursor: default !important;
+      }
+      .panel[draggable="true"] {
+        cursor: default !important;
+      }
+      .layout-indicator {
+        display: none;
+      }
+    }
+
+    /* Mobile Portrait (480px and below) */
+    @media (max-width: 480px) {
+      body {
+        font-size: 14px;
+      }
+      .header {
+        padding: 8px 10px;
+      }
+      .logo h1 {
+        font-size: 14px;
+      }
+      .status-bar {
+        font-size: 11px;
+        gap: 10px;
+      }
+      .filter-bar {
+        padding: 8px 10px;
+      }
+      .filter-label {
+        display: none;
+      }
+      .filter-select, .filter-input {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+      }
+      .filter-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+      .main-container {
+        padding: 8px;
+        gap: 10px;
+      }
+      .panel {
+        border-radius: 8px;
+      }
+      .panel-content {
+        padding: 8px;
+        max-height: 220px;
+      }
+      .item {
+        padding: 6px 8px;
+      }
+      .item-symbol {
+        font-size: 12px;
+      }
+      .item-value {
+        font-size: 12px;
+      }
+      .smart-item-header {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .smart-item-meta {
+        gap: 4px;
+      }
+      .meta-tag {
+        font-size: 9px;
+        padding: 2px 4px;
+      }
+      .sentiment-bar {
+        padding: 8px 10px;
+      }
+      .sentiment-gauge {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .sentiment-meter {
+        width: 100px;
+      }
+      .stat-item {
+        min-width: 60px;
+      }
+      .stat-value {
+        font-size: 14px;
+      }
+      .stat-label {
+        font-size: 9px;
+      }
+      .top-picks-header {
+        padding: 10px 15px;
+      }
+      .top-picks-title {
+        font-size: 14px;
+      }
+      .picks-column {
+        padding: 8px;
+      }
+      .picks-column-header {
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+      .section-header {
+        padding: 8px 10px;
+      }
+      .section-title {
+        font-size: 12px;
+      }
+      .connection-message {
+        font-size: 16px;
+      }
+      .connection-submessage {
+        font-size: 12px;
+        padding: 0 20px;
+      }
+    }
+
+    /* Extra small devices (360px and below) */
+    @media (max-width: 360px) {
+      .logo h1 {
+        font-size: 12px;
+      }
+      .filter-group {
+        width: 100%;
+      }
+      .filter-select {
+        width: 100%;
+      }
+      .status-bar > div {
+        font-size: 10px;
+      }
+    }
+
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+      .item {
+        padding: 10px 12px;
+        margin-bottom: 8px;
+      }
+      .smart-item {
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .filter-btn {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      .filter-select, .filter-input {
+        min-height: 44px;
+      }
+      .pick-item {
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .notification-toast {
+        padding: 14px 16px;
+      }
+    }
+
+    /* Landscape orientation adjustments */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .connection-overlay {
+        gap: 10px;
+      }
+      .connection-spinner {
+        width: 40px;
+        height: 40px;
+      }
+      .connection-message {
+        font-size: 16px;
       }
     }
   </style>
 </head>
 <body>
+  <!-- Connection Status Overlay -->
+  <div class="connection-overlay" id="connectionOverlay">
+    <div class="connection-spinner"></div>
+    <div class="connection-message" id="connectionMessage">Connecting to server...</div>
+    <div class="connection-submessage" id="connectionSubmessage">Establishing WebSocket connection to receive real-time data</div>
+    <div class="connection-retry-count" id="connectionRetryCount" style="display: none;">Retry attempt: <span id="retryNumber">1</span></div>
+  </div>
+
+  <!-- Connection Status Banner -->
+  <div class="connection-banner" id="connectionBanner">
+    <div class="banner-spinner"></div>
+    <span id="bannerMessage">Reconnecting...</span>
+  </div>
+
   <!-- Header -->
   <header class="header">
     <div class="logo">
@@ -2670,14 +3114,156 @@
       });
     });
 
-    // Connection handling
+    // ============================================
+    // CONNECTION STATUS MANAGER
+    // ============================================
+    const ConnectionManager = {
+      overlay: document.getElementById('connectionOverlay'),
+      overlayMessage: document.getElementById('connectionMessage'),
+      overlaySubmessage: document.getElementById('connectionSubmessage'),
+      retryCountEl: document.getElementById('connectionRetryCount'),
+      retryNumberEl: document.getElementById('retryNumber'),
+      banner: document.getElementById('connectionBanner'),
+      bannerMessage: document.getElementById('bannerMessage'),
+      retryCount: 0,
+      isFirstConnect: true,
+      wasConnected: false,
+      reconnectTimeout: null,
+
+      init: function() {
+        // Show overlay on initial load
+        this.showOverlay('Connecting to server...', 'Establishing WebSocket connection to receive real-time data');
+      },
+
+      showOverlay: function(message, submessage) {
+        this.overlayMessage.textContent = message || 'Connecting...';
+        this.overlaySubmessage.textContent = submessage || '';
+        this.overlay.classList.add('visible');
+      },
+
+      hideOverlay: function() {
+        this.overlay.classList.remove('visible');
+      },
+
+      showBanner: function(message, type) {
+        this.banner.className = 'connection-banner visible ' + (type || '');
+        this.bannerMessage.textContent = message;
+
+        // Auto-hide success banner after 3 seconds
+        if (type === 'connected') {
+          setTimeout(() => {
+            this.hideBanner();
+          }, 3000);
+        }
+      },
+
+      hideBanner: function() {
+        this.banner.classList.remove('visible');
+      },
+
+      updateStatusDot: function(status) {
+        statusDot.classList.remove('connected', 'disconnected', 'reconnecting');
+        if (status === 'connected') {
+          statusDot.classList.add('connected');
+        } else if (status === 'reconnecting') {
+          statusDot.classList.add('reconnecting');
+        } else {
+          statusDot.classList.add('disconnected');
+        }
+      },
+
+      onConnect: function() {
+        console.log('Connected to server');
+        this.hideOverlay();
+        this.updateStatusDot('connected');
+        statusText.textContent = 'Connected';
+
+        if (!this.isFirstConnect && this.wasConnected) {
+          // Reconnected after disconnection
+          this.showBanner('Connection restored', 'connected');
+        }
+
+        this.isFirstConnect = false;
+        this.wasConnected = true;
+        this.retryCount = 0;
+        this.retryCountEl.style.display = 'none';
+
+        if (this.reconnectTimeout) {
+          clearTimeout(this.reconnectTimeout);
+          this.reconnectTimeout = null;
+        }
+      },
+
+      onDisconnect: function(reason) {
+        console.log('Disconnected:', reason);
+        this.wasConnected = true;
+        this.updateStatusDot('disconnected');
+        statusText.textContent = 'Disconnected';
+
+        // Show banner immediately
+        this.showBanner('Connection lost - Reconnecting...', 'reconnecting');
+
+        // If disconnected for more than 5 seconds, show overlay
+        this.reconnectTimeout = setTimeout(() => {
+          this.showOverlay('Connection Lost', 'Attempting to reconnect to the server...');
+          this.retryCountEl.style.display = 'block';
+        }, 5000);
+      },
+
+      onReconnecting: function(attemptNumber) {
+        console.log('Reconnecting, attempt:', attemptNumber);
+        this.retryCount = attemptNumber;
+        this.retryNumberEl.textContent = attemptNumber;
+        this.updateStatusDot('reconnecting');
+        statusText.textContent = 'Reconnecting...';
+
+        this.showBanner('Reconnecting... (attempt ' + attemptNumber + ')', 'reconnecting');
+
+        if (attemptNumber > 2) {
+          this.showOverlay('Reconnecting...', 'Attempt ' + attemptNumber + ' - Please wait');
+          this.retryCountEl.style.display = 'block';
+        }
+      },
+
+      onReconnectError: function(error) {
+        console.log('Reconnect error:', error);
+        this.overlaySubmessage.textContent = 'Connection failed. Retrying...';
+      },
+
+      onReconnectFailed: function() {
+        console.log('Reconnect failed');
+        this.showOverlay('Connection Failed', 'Unable to connect to the server. Please refresh the page.');
+        this.showBanner('Connection failed - Please refresh', '');
+        this.retryCountEl.style.display = 'none';
+      }
+    };
+
+    // Initialize connection manager
+    ConnectionManager.init();
+
+    // Socket event handlers
     socket.on('connect', function() {
-      console.log('Connected to server');
+      ConnectionManager.onConnect();
     });
 
-    socket.on('disconnect', function() {
-      statusDot.classList.remove('connected');
-      statusText.textContent = 'Disconnected';
+    socket.on('disconnect', function(reason) {
+      ConnectionManager.onDisconnect(reason);
+    });
+
+    socket.io.on('reconnect_attempt', function(attemptNumber) {
+      ConnectionManager.onReconnecting(attemptNumber);
+    });
+
+    socket.io.on('reconnect_error', function(error) {
+      ConnectionManager.onReconnectError(error);
+    });
+
+    socket.io.on('reconnect_failed', function() {
+      ConnectionManager.onReconnectFailed();
+    });
+
+    socket.io.on('reconnect', function() {
+      ConnectionManager.onConnect();
     });
 
     // View toggle handler - Default to compact mode
