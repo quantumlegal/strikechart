@@ -77,7 +77,7 @@ export const config = {
   // ML Service configuration
   ml: {
     enabled: process.env.ML_ENABLED !== 'false',
-    serviceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000',
+    serviceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8001',
     timeout: Number(process.env.ML_TIMEOUT) || 2000,
     minSignalsForTraining: Number(process.env.ML_MIN_SIGNALS) || 500,
     mlWeight: Number(process.env.ML_WEIGHT) || 0.6,

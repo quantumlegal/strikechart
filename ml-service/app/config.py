@@ -102,4 +102,4 @@ QUALITY_TIERS = {
 
 # Server configuration
 SERVER_HOST = os.getenv("ML_HOST", "0.0.0.0")
-SERVER_PORT = int(os.getenv("ML_PORT", "8000"))
+SERVER_PORT = int(os.getenv("ML_PORT", "8001"))
