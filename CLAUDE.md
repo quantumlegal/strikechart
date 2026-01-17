@@ -26,7 +26,7 @@ pm2 start dist/web-index.js --name strikechart -i max
 
 ## Architecture Overview
 
-StrikeChart is a real-time Binance Futures volatility hunter monitoring 584+ trading pairs.
+Signal Sense Hunter is a real-time Binance Futures volatility hunter monitoring 584+ trading pairs.
 
 ### Data Flow
 
@@ -70,8 +70,8 @@ Detectors operate independently on DataStore. OpportunityRanker orchestrates all
 
 ### Entry Points
 
-- `src/index.ts` - Terminal UI entry point (StrikeChart class)
-- `src/web-index.ts` - Web server entry point (StrikeChartWeb class)
+- `src/index.ts` - Terminal UI entry point (Signal Sense Hunter class)
+- `src/web-index.ts` - Web server entry point (Signal Sense HunterWeb class)
 
 ## Configuration
 

@@ -7,7 +7,7 @@ import { SoundAlert } from './alerts/sound.js';
 import { StorageManager } from './storage/sqlite.js';
 import { TickerData } from './binance/types.js';
 
-class StrikeChartWeb {
+class SignalSenseHunterWeb {
   private ws: BinanceWebSocket;
   private dataStore: DataStore;
   private opportunityRanker: OpportunityRanker;
@@ -104,7 +104,7 @@ class StrikeChartWeb {
   }
 
   async start(): Promise<void> {
-    console.log('Starting StrikeChart Web...');
+    console.log('Starting Signal Sense Hunter Web...');
 
     await this.init();
 
@@ -144,11 +144,11 @@ class StrikeChartWeb {
       }
     }, 5000);
 
-    console.log('StrikeChart Web started. Press Ctrl+C to stop.');
+    console.log('Signal Sense Hunter Web started. Press Ctrl+C to stop.');
   }
 
   private async shutdown(): Promise<void> {
-    console.log('\nShutting down StrikeChart Web...');
+    console.log('\nShutting down Signal Sense Hunter Web...');
 
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -168,10 +168,10 @@ class StrikeChartWeb {
     this.storage.close();
     await this.webServer.stop();
 
-    console.log('StrikeChart Web stopped.');
+    console.log('Signal Sense Hunter Web stopped.');
     process.exit(0);
   }
 }
 
-const app = new StrikeChartWeb();
+const app = new SignalSenseHunterWeb();
 app.start();

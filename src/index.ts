@@ -7,7 +7,7 @@ import { SoundAlert } from './alerts/sound.js';
 import { StorageManager } from './storage/sqlite.js';
 import { TickerData } from './binance/types.js';
 
-class StrikeChart {
+class SignalSenseHunter {
   private ws: BinanceWebSocket;
   private dataStore: DataStore;
   private opportunityRanker: OpportunityRanker;
@@ -113,7 +113,7 @@ class StrikeChart {
   }
 
   async start(): Promise<void> {
-    console.log('Starting StrikeChart...');
+    console.log('Starting Signal Sense Hunter...');
 
     // Initialize storage
     await this.init();
@@ -138,11 +138,11 @@ class StrikeChart {
       this.logOpportunities();
     }, 10000);
 
-    console.log('StrikeChart started. Press Q to quit.');
+    console.log('Signal Sense Hunter started. Press Q to quit.');
   }
 
   private shutdown(): void {
-    console.log('\nShutting down StrikeChart...');
+    console.log('\nShutting down Signal Sense Hunter...');
 
     // Clear intervals
     if (this.refreshInterval) {
@@ -166,11 +166,11 @@ class StrikeChart {
     // Destroy dashboard
     this.dashboard.destroy();
 
-    console.log('StrikeChart stopped.');
+    console.log('Signal Sense Hunter stopped.');
     process.exit(0);
   }
 }
 
 // Start the application
-const app = new StrikeChart();
+const app = new SignalSenseHunter();
 app.start();

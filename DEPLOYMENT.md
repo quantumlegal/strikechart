@@ -1,4 +1,4 @@
-# StrikeChart Deployment Guide
+# Signal Sense Hunter Deployment Guide
 
 ## Quick Start (Production)
 
@@ -7,11 +7,11 @@
 npm run build
 
 # Start with PM2 (recommended)
-pm2 start dist/web-index.js --name strikechart -i max
+pm2 start dist/web-index.js --name signalsensehunter -i max
 
 # Or use Docker
-docker build -t strikechart .
-docker run -d -p 3000:3000 --name strikechart strikechart
+docker build -t signalsensehunter .
+docker run -d -p 3000:3000 --name signalsensehunter strikechart
 ```
 
 ---
@@ -44,7 +44,7 @@ Create `ecosystem.config.js`:
 ```javascript
 module.exports = {
   apps: [{
-    name: 'strikechart',
+    name: 'signalsensehunter',
     script: 'dist/web-index.js',
     instances: 'max',        // Use all CPU cores
     exec_mode: 'cluster',
@@ -103,7 +103,7 @@ src
 ### 5. Nginx Reverse Proxy (Recommended)
 
 ```nginx
-upstream strikechart {
+upstream signalsensehunter {
     server 127.0.0.1:3000;
     keepalive 64;
 }
@@ -135,7 +135,7 @@ server {
 
     # WebSocket support
     location /socket.io/ {
-        proxy_pass http://strikechart;
+        proxy_pass http://signalsensehunter;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -146,7 +146,7 @@ server {
 
     # API and main app
     location / {
-        proxy_pass http://strikechart;
+        proxy_pass http://signalsensehunter;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
