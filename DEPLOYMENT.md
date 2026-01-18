@@ -1,5 +1,55 @@
 # Signal Sense Hunter Deployment Guide
 
+## CRITICAL: Preserving ML Training Data
+
+The ML system stores training data in Docker volumes. **Using the wrong deployment method will delete all training data!**
+
+### Docker Volumes (Must Preserve)
+
+| Volume | Contents | Purpose |
+|--------|----------|---------|
+| `ml-models` | `.joblib` files | Trained XGBoost/LightGBM models |
+| `app-data` | SQLite database | Signal features, outcomes, ML predictions |
+
+### Correct Deployment Method (Hostinger VPS)
+
+**Use UPDATE, not DELETE/CREATE:**
+
+```bash
+# Via Hostinger API - Updates code while PRESERVING volumes
+POST /api/vps/v1/virtual-machines/1256837/docker/projects/signalsensehunter/update
+```
+
+**Via SSH (Alternative):**
+```bash
+ssh root@72.61.93.6
+cd /docker/signalsensehunter
+git pull origin master
+docker-compose down           # Stops containers, KEEPS volumes
+docker-compose up --build -d  # Rebuilds with new code
+docker-compose ps             # Verify healthy
+```
+
+### WRONG Method (Loses All Data!)
+
+**DO NOT use Delete Project + Create Project** - this deletes Docker volumes!
+
+### Verify Data After Deployment
+
+```bash
+curl https://signalsense.trade/api/ml/feature-counts
+# Should show: {"total":X,"completed":Y,...} where X > 0
+# If all zeros, volumes were deleted!
+```
+
+### Backup Before Risky Operations
+
+```bash
+curl https://signalsense.trade/api/ml/export-csv > backup_training_data.csv
+```
+
+---
+
 ## Quick Start (Production)
 
 ```bash
