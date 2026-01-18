@@ -2210,6 +2210,43 @@
       font-size: 11px;
     }
 
+    /* Visitor Counter */
+    .visitor-counter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .visitor-icon {
+      width: 16px;
+      height: 16px;
+      color: #38bdf8;
+    }
+
+    .visitor-count-online {
+      color: #38bdf8;
+      font-weight: 700;
+      font-size: 14px;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+      animation: pulse-number 2s ease-in-out infinite;
+      transition: transform 0.3s ease;
+    }
+
+    .visitor-label {
+      color: #7dd3fc;
+      font-size: 11px;
+    }
+
+    @keyframes pulse-number {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
     /* ML Quality Tier Badges */
     .quality-tier-badge {
       display: inline-flex;
@@ -2581,6 +2618,16 @@
         <span class="ml-version" id="mlVersion"></span>
       </div>
       <div>Symbols: <strong id="symbolCount">0</strong></div>
+      <div class="visitor-counter">
+        <svg class="visitor-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span class="visitor-count-online" id="visitorCount">1</span>
+        <span class="visitor-label">online</span>
+      </div>
       <div>Last Update: <span id="lastUpdate">--:--:--</span></div>
     </div>
   </header>
@@ -4552,6 +4599,11 @@
       symbolCount.textContent = data.symbolCount;
       lastUpdate.textContent = new Date(data.timestamp).toLocaleTimeString();
 
+      // Update visitor count if present
+      if (data.visitors) {
+        updateVisitorCount(data.visitors.online);
+      }
+
       // Clear all panels
       Object.values(panels).forEach(clearPanel);
 
@@ -5111,6 +5163,27 @@
     socket.io.on('reconnect', function() {
       ConnectionManager.onConnect();
     });
+
+    // Visitor count handler
+    socket.on('visitorCount', function(data) {
+      updateVisitorCount(data.online);
+    });
+
+    // Update visitor count display
+    function updateVisitorCount(count) {
+      var visitorCountEl = document.getElementById('visitorCount');
+      if (visitorCountEl) {
+        var currentCount = parseInt(visitorCountEl.textContent) || 0;
+        if (count !== currentCount) {
+          visitorCountEl.textContent = count;
+          // Add a brief highlight animation on change
+          visitorCountEl.style.transform = 'scale(1.2)';
+          setTimeout(function() {
+            visitorCountEl.style.transform = 'scale(1)';
+          }, 300);
+        }
+      }
+    }
 
     // View toggle handler - Default to compact mode
     var viewToggle = document.getElementById('viewToggle');

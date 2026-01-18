@@ -35,6 +35,8 @@ export class WebServer {
   private port: number;
   private connectionStatus: ConnectionStatus = 'disconnected';
   private symbolCount: number = 0;
+  private visitorCount: number = 0;
+  private totalVisitors: number = 0;  // All-time counter
 
   // Detectors
   private fundingDetector: FundingDetector;
@@ -350,9 +352,16 @@ export class WebServer {
 
   private setupSocketIO(): void {
     this.io.on('connection', (socket) => {
+      // Track visitor count
+      this.visitorCount++;
+      this.totalVisitors++;
+
       if (config.logging.verbose) {
-        console.log('Client connected:', socket.id);
+        console.log('Client connected:', socket.id, `(${this.visitorCount} online)`);
       }
+
+      // Broadcast updated visitor count to ALL clients
+      this.broadcastVisitorCount();
       this.emitUpdate();
 
       // Handle filter updates from client
@@ -372,10 +381,22 @@ export class WebServer {
       });
 
       socket.on('disconnect', () => {
+        this.visitorCount = Math.max(0, this.visitorCount - 1);
+
         if (config.logging.verbose) {
-          console.log('Client disconnected:', socket.id);
+          console.log('Client disconnected:', socket.id, `(${this.visitorCount} online)`);
         }
+
+        // Broadcast updated visitor count to remaining clients
+        this.broadcastVisitorCount();
       });
+    });
+  }
+
+  private broadcastVisitorCount(): void {
+    this.io.emit('visitorCount', {
+      online: this.visitorCount,
+      total: this.totalVisitors,
     });
   }
 
@@ -505,6 +526,12 @@ export class WebServer {
       // ML Status
       mlStatus: this.mlClient.getStatus(),
       mlFeatureCounts: this.winRateTracker.getFeatureCounts(),
+
+      // Visitor count
+      visitors: {
+        online: this.visitorCount,
+        total: this.totalVisitors,
+      },
     };
 
     this.io.emit('update', data);
