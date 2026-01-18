@@ -30,6 +30,10 @@ import { FeatureExtractor } from '../services/featureExtractor.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Trust proxy setting for rate limiter (required behind Cloudflare/nginx)
+// Must be set BEFORE creating rate limiters
+const TRUST_PROXY = true;
+
 // Security: Rate limiting configuration
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -112,6 +116,11 @@ export class WebServer {
   ) {
     this.port = port;
     this.app = express();
+
+    // Trust proxy for correct IP detection behind reverse proxy (Cloudflare, nginx)
+    // This is required for rate limiting to work correctly
+    this.app.set('trust proxy', TRUST_PROXY);
+
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
