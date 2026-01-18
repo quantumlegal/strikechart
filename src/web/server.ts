@@ -3,6 +3,8 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { OpportunityRanker } from '../core/opportunity.js';
 import { DataStore } from '../core/dataStore.js';
@@ -28,6 +30,33 @@ import { FeatureExtractor } from '../services/featureExtractor.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Security: Rate limiting configuration
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute per IP
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute (for sensitive endpoints like training)
+  message: { error: 'Rate limit exceeded for this endpoint.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://signalsense.trade',
+  'https://www.signalsense.trade',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+];
+
 export class WebServer {
   private app: express.Application;
   private server: ReturnType<typeof createServer>;
@@ -37,6 +66,12 @@ export class WebServer {
   private symbolCount: number = 0;
   private visitorCount: number = 0;
   private totalVisitors: number = 0;  // All-time counter
+
+  // Security: Track connections per IP
+  private connectionsPerIP: Map<string, number> = new Map();
+  private readonly MAX_CONNECTIONS_PER_IP = 5;
+  private readonly MESSAGE_RATE_LIMIT = 30; // messages per minute per socket
+  private socketMessageCounts: Map<string, { count: number; resetTime: number }> = new Map();
 
   // Detectors
   private fundingDetector: FundingDetector;
@@ -71,9 +106,22 @@ export class WebServer {
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: '*',
+        origin: (origin, callback) => {
+          // Allow requests with no origin (mobile apps, curl, etc.) in development
+          if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true);
+          } else {
+            console.warn(`[Security] Blocked Socket.IO connection from origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
         methods: ['GET', 'POST'],
+        credentials: true,
       },
+      // Connection limits
+      pingTimeout: 60000,
+      pingInterval: 25000,
+      maxHttpBufferSize: 1e6, // 1MB max message size
     });
 
     // Initialize detectors
@@ -160,8 +208,41 @@ export class WebServer {
   }
 
   private setupRoutes(): void {
+    // Security: Helmet for HTTP security headers
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Socket.IO
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com"],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Allow embedding
+    }));
+
+    // Security: CORS for Express
+    this.app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+      }
+      next();
+    });
+
+    // Security: Rate limiting for API endpoints
+    this.app.use('/api/', apiLimiter);
+
     this.app.use(express.static(path.join(__dirname, '../../public')));
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: '100kb' })); // Limit JSON body size
 
     // API endpoints
     this.app.get('/api/status', (req, res) => {
@@ -305,8 +386,8 @@ export class WebServer {
       }
     });
 
-    // Trigger ML training
-    this.app.post('/api/ml/train', async (req, res) => {
+    // Trigger ML training (strict rate limit)
+    this.app.post('/api/ml/train', strictLimiter, async (req, res) => {
       if (!this.winRateTracker.hasEnoughDataForTraining(config.ml.minSignalsForTraining)) {
         res.status(400).json({
           error: 'Not enough training data',
@@ -351,37 +432,114 @@ export class WebServer {
   }
 
   private setupSocketIO(): void {
+    // Security: Connection middleware to limit connections per IP
+    this.io.use((socket, next) => {
+      const clientIP = socket.handshake.address ||
+                       socket.handshake.headers['x-forwarded-for']?.toString().split(',')[0] ||
+                       'unknown';
+
+      const currentConnections = this.connectionsPerIP.get(clientIP) || 0;
+
+      if (currentConnections >= this.MAX_CONNECTIONS_PER_IP) {
+        console.warn(`[Security] Blocked connection from ${clientIP}: too many connections (${currentConnections})`);
+        return next(new Error('Too many connections from your IP'));
+      }
+
+      // Store IP on socket for later cleanup
+      (socket as any).clientIP = clientIP;
+      this.connectionsPerIP.set(clientIP, currentConnections + 1);
+
+      next();
+    });
+
     this.io.on('connection', (socket) => {
+      const clientIP = (socket as any).clientIP || 'unknown';
+
       // Track visitor count
       this.visitorCount++;
       this.totalVisitors++;
 
       if (config.logging.verbose) {
-        console.log('Client connected:', socket.id, `(${this.visitorCount} online)`);
+        console.log('Client connected:', socket.id, `from ${clientIP}`, `(${this.visitorCount} online)`);
       }
+
+      // Initialize message rate tracking for this socket
+      this.socketMessageCounts.set(socket.id, { count: 0, resetTime: Date.now() + 60000 });
 
       // Broadcast updated visitor count to ALL clients
       this.broadcastVisitorCount();
       this.emitUpdate();
 
-      // Handle filter updates from client
+      // Security: Rate limit helper for socket messages
+      const checkRateLimit = (): boolean => {
+        const rateData = this.socketMessageCounts.get(socket.id);
+        if (!rateData) return false;
+
+        const now = Date.now();
+        if (now > rateData.resetTime) {
+          rateData.count = 0;
+          rateData.resetTime = now + 60000;
+        }
+
+        rateData.count++;
+        if (rateData.count > this.MESSAGE_RATE_LIMIT) {
+          console.warn(`[Security] Rate limit exceeded for socket ${socket.id} from ${clientIP}`);
+          return false;
+        }
+        return true;
+      };
+
+      // Handle filter updates from client (with rate limiting)
       socket.on('setFilter', (filterConfig) => {
+        if (!checkRateLimit()) {
+          socket.emit('error', { message: 'Rate limit exceeded' });
+          return;
+        }
         this.filterManager.setConfig(filterConfig);
         this.emitUpdate();
       });
 
       socket.on('addToWatchlist', (symbol) => {
+        if (!checkRateLimit()) {
+          socket.emit('error', { message: 'Rate limit exceeded' });
+          return;
+        }
+        // Security: Validate symbol input
+        if (typeof symbol !== 'string' || symbol.length > 20 || !/^[A-Z0-9]+$/.test(symbol)) {
+          socket.emit('error', { message: 'Invalid symbol' });
+          return;
+        }
         this.filterManager.addToWatchlist(symbol);
         this.emitUpdate();
       });
 
       socket.on('removeFromWatchlist', (symbol) => {
+        if (!checkRateLimit()) {
+          socket.emit('error', { message: 'Rate limit exceeded' });
+          return;
+        }
+        // Security: Validate symbol input
+        if (typeof symbol !== 'string' || symbol.length > 20) {
+          socket.emit('error', { message: 'Invalid symbol' });
+          return;
+        }
         this.filterManager.removeFromWatchlist(symbol);
         this.emitUpdate();
       });
 
       socket.on('disconnect', () => {
         this.visitorCount = Math.max(0, this.visitorCount - 1);
+
+        // Clean up connection tracking
+        const currentConnections = this.connectionsPerIP.get(clientIP) || 1;
+        if (currentConnections <= 1) {
+          this.connectionsPerIP.delete(clientIP);
+        } else {
+          this.connectionsPerIP.set(clientIP, currentConnections - 1);
+        }
+
+        // Clean up message rate tracking
+        this.socketMessageCounts.delete(socket.id);
 
         if (config.logging.verbose) {
           console.log('Client disconnected:', socket.id, `(${this.visitorCount} online)`);
