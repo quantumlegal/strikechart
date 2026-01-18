@@ -1178,6 +1178,17 @@
       flex-shrink: 0;
     }
 
+    .pick-sparkline.loading {
+      background: linear-gradient(90deg, rgba(0,0,0,0.3) 25%, rgba(48,54,61,0.5) 50%, rgba(0,0,0,0.3) 75%);
+      background-size: 200% 100%;
+      animation: sparkline-shimmer 1.5s infinite;
+    }
+
+    @keyframes sparkline-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
     .pick-sparkline .sparkline {
       width: 100%;
       height: 100%;
@@ -3951,19 +3962,32 @@
 
     // Fetch price history for a symbol
     async function fetchPriceHistory(symbol) {
-      // Check cache first (valid for 5 seconds)
+      // Check cache first (valid for 30 seconds to reduce API calls)
       const cached = priceHistoryCache.get(symbol);
-      if (cached && Date.now() - cached.timestamp < 5000) {
+      if (cached && Date.now() - cached.timestamp < 30000) {
         return cached.data;
       }
 
       try {
         const response = await fetch('/api/price-history/' + symbol);
         const data = await response.json();
-        priceHistoryCache.set(symbol, { data: data.history, timestamp: Date.now() });
-        return data.history;
+
+        // Check if response contains valid history data (not an error response)
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+          priceHistoryCache.set(symbol, { data: data.history, timestamp: Date.now() });
+          return data.history;
+        }
+
+        // If response is an error or empty, return stale cache if available
+        if (cached && cached.data) {
+          return cached.data;
+        }
+        return null;
       } catch (e) {
-        console.error('Failed to fetch price history for', symbol);
+        // On network error, return stale cache if available
+        if (cached && cached.data) {
+          return cached.data;
+        }
         return null;
       }
     }
@@ -4872,16 +4896,19 @@
 
       // Sparkline container (small, in header)
       const sparklineContainer = document.createElement('div');
-      sparklineContainer.className = 'pick-sparkline';
+      sparklineContainer.className = 'pick-sparkline loading';
 
       // Fetch and add sparkline asynchronously
       fetchPriceHistory(pick.symbol).then(history => {
-        if (history && history.length > 0) {
+        sparklineContainer.classList.remove('loading');
+        if (history && history.length >= 2) {
           const sparkline = createSparkline(history, 70, 24);
           if (sparkline) {
             sparklineContainer.appendChild(sparkline);
           }
         }
+      }).catch(() => {
+        sparklineContainer.classList.remove('loading');
       });
 
       const score = document.createElement('span');
