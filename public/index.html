@@ -2844,7 +2844,7 @@
       <div class="performance-header" onclick="toggleCollapse('performanceSection')">
         <div>
           <div class="performance-title">
-            <span>📊</span> SIGNAL PERFORMANCE TRACKER
+            SIGNAL PERFORMANCE TRACKER
             <span class="collapse-toggle">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -2853,7 +2853,13 @@
           </div>
           <div class="performance-subtitle">Real-time tracking of signal accuracy and P&L</div>
         </div>
-        <div class="performance-subtitle" id="performanceLastUpdate">--</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="collapsed-loader" id="perfCollapsedLoader" style="font-size: 10px; color: #a371f7; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 10px; height: 10px; border: 2px solid #30363d; border-top-color: #a371f7; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></span>
+            Collecting Data...
+          </span>
+          <div class="performance-subtitle" id="performanceLastUpdate">--</div>
+        </div>
       </div>
       <div class="performance-grid">
         <div class="performance-stat">
@@ -2898,7 +2904,7 @@
       <div class="ml-performance-panel" id="mlPerformancePanel">
         <div class="ml-performance-header">
           <div class="ml-performance-title">
-            <span>🤖</span> ML MODEL PERFORMANCE
+            ML MODEL PERFORMANCE
           </div>
           <span class="ml-version" id="mlModelVersion">--</span>
         </div>
@@ -2929,7 +2935,7 @@
       <div class="top-picks-header" onclick="toggleCollapse('topPicksSection')">
         <div>
           <div class="top-picks-title">
-            <span>🎯</span> TOP PICKS TRADE
+            TOP PICKS TRADE
             <span class="collapse-toggle">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -2964,7 +2970,6 @@
 
     <!-- Smart Signals Section -->
     <div class="section-header section-collapsible" onclick="toggleSection('smartSignalsSection')">
-      <span class="section-icon">🧠</span>
       <span class="section-title">SMART SIGNALS - AI-Powered Trade Detection</span>
       <span class="collapse-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3046,7 +3051,6 @@
 
     <!-- Market Data Section -->
     <div class="section-header section-collapsible" onclick="toggleSection('marketDataSection')">
-      <span class="section-icon">📊</span>
       <span class="section-title">MARKET DATA</span>
       <span class="collapse-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3059,7 +3063,7 @@
       <!-- Top Movers -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🔥 Top Movers (24H)</div>
+          <div class="panel-title">Top Movers (24H)</div>
           <span class="panel-badge" id="moversCount">0</span>
         </div>
         <div class="panel-content" id="topMoversPanel"></div>
@@ -3068,7 +3072,7 @@
       <!-- Velocity Alerts -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">⚡ Velocity Alerts</div>
+          <div class="panel-title">Velocity Alerts</div>
           <span class="panel-badge" id="velocityCount">0</span>
         </div>
         <div class="panel-content" id="velocityPanel"></div>
@@ -3077,7 +3081,7 @@
       <!-- Volume Spikes -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📊 Volume Spikes</div>
+          <div class="panel-title">Volume Spikes</div>
           <span class="panel-badge" id="volumeCount">0</span>
         </div>
         <div class="panel-content" id="volumePanel"></div>
@@ -3086,7 +3090,7 @@
       <!-- High Conviction -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">⭐ High Conviction</div>
+          <div class="panel-title">High Conviction</div>
           <span class="panel-badge" id="convictionCount">0</span>
         </div>
         <div class="panel-content" id="convictionPanel"></div>
@@ -3095,7 +3099,6 @@
 
     <!-- Advanced Indicators Section -->
     <div class="section-header section-collapsible" onclick="toggleSection('advancedIndicatorsSection')">
-      <span class="section-icon">🎯</span>
       <span class="section-title">ADVANCED INDICATORS</span>
       <span class="collapse-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3108,7 +3111,7 @@
       <!-- Funding Rates -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">💰 Extreme Funding</div>
+          <div class="panel-title">Extreme Funding</div>
           <span class="panel-badge" id="fundingCount">0</span>
         </div>
         <div class="panel-content" id="fundingPanel"></div>
@@ -3117,7 +3120,7 @@
       <!-- Squeeze Setups -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🔧 Squeeze Setups</div>
+          <div class="panel-title">Squeeze Setups</div>
           <span class="panel-badge" id="squeezeCount">0</span>
         </div>
         <div class="panel-content" id="squeezePanel"></div>
@@ -3126,7 +3129,7 @@
       <!-- Open Interest -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📈 OI Changes</div>
+          <div class="panel-title">OI Changes</div>
           <span class="panel-badge" id="oiCount">0</span>
         </div>
         <div class="panel-content" id="oiPanel"></div>
@@ -3135,7 +3138,7 @@
       <!-- Multi-Timeframe -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📐 MTF Alignment</div>
+          <div class="panel-title">MTF Alignment</div>
           <span class="panel-badge" id="mtfCount">0</span>
         </div>
         <div class="panel-content" id="mtfPanel"></div>
@@ -3144,7 +3147,7 @@
       <!-- RSI Extremes -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📉 RSI Extremes</div>
+          <div class="panel-title">RSI Extremes</div>
           <span class="panel-badge" id="rsiCount">0</span>
         </div>
         <div class="panel-content" id="rsiPanel"></div>
@@ -3153,7 +3156,7 @@
       <!-- Divergences -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🔀 Divergences</div>
+          <div class="panel-title">Divergences</div>
           <span class="panel-badge" id="divCount">0</span>
         </div>
         <div class="panel-content" id="divergencePanel"></div>
@@ -3162,7 +3165,6 @@
 
     <!-- Advanced Detection Section -->
     <div class="section-header section-collapsible" onclick="toggleSection('advancedDetectionSection')">
-      <span class="section-icon">🔬</span>
       <span class="section-title">ADVANCED DETECTION</span>
       <span class="collapse-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3175,7 +3177,7 @@
       <!-- Liquidation Alerts -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">💥 Liquidation Alerts</div>
+          <div class="panel-title">Liquidation Alerts</div>
           <span class="panel-badge" id="liqCount">0</span>
         </div>
         <div class="panel-content" id="liquidationPanel"></div>
@@ -3184,7 +3186,7 @@
       <!-- Whale Alerts -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🐋 Whale Activity</div>
+          <div class="panel-title">Whale Activity</div>
           <span class="panel-badge" id="whaleCount">0</span>
         </div>
         <div class="panel-content" id="whalePanel"></div>
@@ -3193,7 +3195,7 @@
       <!-- BTC Correlation -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🔗 BTC Correlation</div>
+          <div class="panel-title">BTC Correlation</div>
           <span class="panel-badge" id="corrCount">0</span>
         </div>
         <div class="panel-content" id="correlationPanel"></div>
@@ -3202,7 +3204,7 @@
       <!-- Pattern Recognition -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📊 Pattern Detection</div>
+          <div class="panel-title">Pattern Detection</div>
           <span class="panel-badge" id="patternCount">0</span>
         </div>
         <div class="panel-content" id="patternPanel"></div>
@@ -3211,7 +3213,6 @@
 
     <!-- Entry Timing Section -->
     <div class="section-header section-collapsible" onclick="toggleSection('entryTimingSection')">
-      <span class="section-icon">🎯</span>
       <span class="section-title">SMART ENTRY TIMING</span>
       <span class="collapse-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3688,9 +3689,14 @@
         signalsTable.innerHTML = '';
         recentSignalsCount.textContent = recentSignals.length + ' signals';
 
+        // Handle collapsed loader visibility
+        const collapsedLoader = document.getElementById('perfCollapsedLoader');
         if (recentSignals.length === 0) {
           signalsTable.innerHTML = '<div class="loading-state training"><div class="loading-spinner"></div><span class="loading-text">Collecting Training Data...</span></div>';
+          if (collapsedLoader) collapsedLoader.style.display = 'flex';
           return;
+        } else {
+          if (collapsedLoader) collapsedLoader.style.display = 'none';
         }
 
         recentSignals.forEach(signal => {
@@ -5306,23 +5312,53 @@
 
       // Show skeletons in all panels
       showAll: function() {
-        // Smart signal panels
-        const smartPanels = ['smartLongPanel', 'smartShortPanel', 'reversalPanel', 'earlyEntriesPanel', 'breakoutPanel', 'lowRiskPanel'];
-        smartPanels.forEach(function(id) {
+        // Smart signal panels with contextual loading messages
+        const smartPanelConfig = {
+          'smartLongPanel': { message: 'Analyzing longs...', type: 'analyzing' },
+          'smartShortPanel': { message: 'Analyzing shorts...', type: 'analyzing' },
+          'reversalPanel': { message: 'Scanning reversals...', type: 'analyzing' },
+          'earlyEntriesPanel': { message: 'Detecting entries...', type: 'analyzing' },
+          'breakoutPanel': { message: 'Scanning breakouts...', type: 'analyzing' },
+          'lowRiskPanel': { message: 'Finding setups...', type: 'analyzing' }
+        };
+        Object.keys(smartPanelConfig).forEach(function(id) {
           const el = document.getElementById(id);
-          if (el) el.innerHTML = SkeletonLoader.createSmartSkeletons(3);
+          if (el) {
+            const config = smartPanelConfig[id];
+            el.innerHTML = '<div class="loading-state ' + config.type + '"><div class="loading-spinner"></div><span class="loading-text">' + config.message + '</span></div>';
+          }
         });
 
-        // Basic panels
-        const basicPanels = ['topMoversPanel', 'velocityPanel', 'volumePanel', 'convictionPanel', 'fundingPanel', 'squeezePanel', 'oiPanel', 'mtfPanel', 'rsiPanel', 'divergencePanel', 'liquidationPanel', 'whalePanel', 'correlationPanel', 'patternPanel', 'entryLongPanel', 'entryShortPanel'];
-        basicPanels.forEach(function(id) {
+        // Basic panels with contextual loading messages
+        const basicPanelConfig = {
+          'topMoversPanel': { message: 'Scanning movers...', type: 'collecting' },
+          'velocityPanel': { message: 'Detecting velocity...', type: 'analyzing' },
+          'volumePanel': { message: 'Analyzing volume...', type: 'analyzing' },
+          'convictionPanel': { message: 'Finding setups...', type: 'analyzing' },
+          'fundingPanel': { message: 'Checking funding...', type: 'collecting' },
+          'squeezePanel': { message: 'Detecting squeezes...', type: 'analyzing' },
+          'oiPanel': { message: 'Analyzing OI...', type: 'collecting' },
+          'mtfPanel': { message: 'Checking alignment...', type: 'analyzing' },
+          'rsiPanel': { message: 'Scanning RSI...', type: 'analyzing' },
+          'divergencePanel': { message: 'Finding divergences...', type: 'analyzing' },
+          'liquidationPanel': { message: 'Monitoring liquidations...', type: 'analyzing' },
+          'whalePanel': { message: 'Tracking whales...', type: 'collecting' },
+          'correlationPanel': { message: 'Calculating correlation...', type: 'analyzing' },
+          'patternPanel': { message: 'Detecting patterns...', type: 'analyzing' },
+          'entryLongPanel': { message: 'Calculating entries...', type: 'analyzing' },
+          'entryShortPanel': { message: 'Calculating entries...', type: 'analyzing' }
+        };
+        Object.keys(basicPanelConfig).forEach(function(id) {
           const el = document.getElementById(id);
-          if (el) el.innerHTML = SkeletonLoader.createBasicSkeletons(4);
+          if (el) {
+            const config = basicPanelConfig[id];
+            el.innerHTML = '<div class="loading-state ' + config.type + '"><div class="loading-spinner"></div><span class="loading-text">' + config.message + '</span></div>';
+          }
         });
 
         // Top picks
-        if (topLongPicks) topLongPicks.innerHTML = SkeletonLoader.createSmartSkeletons(2);
-        if (topShortPicks) topShortPicks.innerHTML = SkeletonLoader.createSmartSkeletons(2);
+        if (topLongPicks) topLongPicks.innerHTML = '<div class="loading-state analyzing"><div class="loading-spinner"></div><span class="loading-text">Finding best longs...</span></div>';
+        if (topShortPicks) topShortPicks.innerHTML = '<div class="loading-state analyzing"><div class="loading-spinner"></div><span class="loading-text">Finding best shorts...</span></div>';
       }
     };
 
