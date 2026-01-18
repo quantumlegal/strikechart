@@ -1,5 +1,18 @@
 # Signal Sense Hunter Deployment Guide
 
+## Quick Reference
+
+| Item | Value |
+|------|-------|
+| **Live URL** | https://signalsense.trade |
+| **GitHub** | https://github.com/quantumlegal/strikechart.git |
+| **VPS IP** | 72.61.93.6 |
+| **VPS ID** | 1256837 |
+| **App Port** | 3001 |
+| **ML Port** | 8001 |
+
+---
+
 ## CRITICAL: Preserving ML Training Data
 
 The ML system stores training data in Docker volumes. **Using the wrong deployment method will delete all training data!**
@@ -11,16 +24,26 @@ The ML system stores training data in Docker volumes. **Using the wrong deployme
 | `ml-models` | `.joblib` files | Trained XGBoost/LightGBM models |
 | `app-data` | SQLite database | Signal features, outcomes, ML predictions |
 
-### Correct Deployment Method (Hostinger VPS)
+### Correct Deployment Methods
 
-**Use UPDATE, not DELETE/CREATE:**
+**Method 1: Via Claude Code MCP (Recommended)**
 
-```bash
-# Via Hostinger API - Updates code while PRESERVING volumes
-POST /api/vps/v1/virtual-machines/1256837/docker/projects/signalsensehunter/update
+```javascript
+// 1. Push changes to GitHub
+git add .
+git commit -m "Your changes"
+git push origin master
+
+// 2. Deploy via Hostinger MCP - PRESERVES volumes
+mcp__hostinger-mcp__VPS_createNewProjectV1({
+  virtualMachineId: 1256837,
+  project_name: "signalsensehunter",
+  content: "https://github.com/quantumlegal/strikechart"
+})
 ```
 
-**Via SSH (Alternative):**
+**Method 2: Via SSH**
+
 ```bash
 ssh root@72.61.93.6
 cd /docker/signalsensehunter
@@ -30,9 +53,25 @@ docker-compose up --build -d  # Rebuilds with new code
 docker-compose ps             # Verify healthy
 ```
 
+**Method 3: Update Only (No Code Changes)**
+
+```javascript
+// Just restart containers with existing code
+mcp__hostinger-mcp__VPS_updateProjectV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+```
+
 ### WRONG Method (Loses All Data!)
 
 **DO NOT use Delete Project + Create Project** - this deletes Docker volumes!
+
+```javascript
+// ❌ NEVER DO THIS - loses all ML training data!
+mcp__hostinger-mcp__VPS_deleteProjectV1(...)  // WRONG!
+mcp__hostinger-mcp__VPS_createNewProjectV1(...) // Data is gone!
+```
 
 ### Verify Data After Deployment
 
@@ -50,310 +89,323 @@ curl https://signalsense.trade/api/ml/export-csv > backup_training_data.csv
 
 ---
 
-## Quick Start (Production)
+## Standard Deployment Workflow
+
+### 1. Make Changes Locally
 
 ```bash
-# Build optimized production bundle
+cd "D:\Trading system\strikechart"
+
+# Edit files...
+
+# Build TypeScript
 npm run build
 
-# Start with PM2 (recommended)
-pm2 start dist/web-index.js --name signalsensehunter -i max
+# Test locally (optional)
+npm run dev:web
+```
 
-# Or use Docker
-docker build -t signalsensehunter .
-docker run -d -p 3000:3000 --name signalsensehunter strikechart
+### 2. Commit and Push
+
+```bash
+git add .
+git commit -m "Description of changes
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+
+git push origin master
+```
+
+### 3. Deploy to VPS
+
+Via Claude Code MCP:
+```javascript
+mcp__hostinger-mcp__VPS_createNewProjectV1({
+  virtualMachineId: 1256837,
+  project_name: "signalsensehunter",
+  content: "https://github.com/quantumlegal/strikechart"
+})
+```
+
+### 4. Verify Deployment
+
+```bash
+# Check status
+curl https://signalsense.trade/api/status
+# Expected: {"status":"connected","symbolCount":584,"uptime":...}
+
+# Check containers
+mcp__hostinger-mcp__VPS_getProjectListV1({ virtualMachineId: 1256837 })
+# Both containers should show "healthy"
 ```
 
 ---
 
-## Optimization Checklist
+## Environment Setup
 
-### 1. Build Optimization
+### Local Development
 
 ```bash
-# Install production dependencies only
-npm ci --production
+# Clone repository
+git clone https://github.com/quantumlegal/strikechart.git
+cd strikechart
 
-# Build TypeScript with optimizations
+# Install dependencies
+npm install
+
+# Development with hot reload
+npm run dev:web
+
+# Or build and run production
 npm run build
+npm run start:web
 ```
 
-### 2. Environment Variables
+### Environment Variables
 
 Create `.env.production`:
 ```env
 NODE_ENV=production
-PORT=3000
-ALLOWED_ORIGINS=https://yourdomain.com
+PORT=3001
+ML_SERVICE_URL=http://ml-service:8001
+ML_ENABLED=true
+ALLOWED_ORIGINS=https://signalsense.trade,https://www.signalsense.trade
 LOG_LEVEL=warn
 ```
 
-### 3. PM2 Configuration (Recommended)
+---
 
-Create `ecosystem.config.js`:
+## Docker Configuration
+
+### docker-compose.yml
+
+```yaml
+services:
+  ml-service:
+    build: ./ml-service
+    container_name: signalsensehunter-ml
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - ml-models:/app/models  # CRITICAL: Persist trained models
+    environment:
+      - ML_HOST=0.0.0.0
+      - ML_PORT=8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  signalsensehunter:
+    build: .
+    container_name: signalsensehunter-app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - app-data:/app/data  # CRITICAL: Persist SQLite database
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - ML_SERVICE_URL=http://ml-service:8001
+      - ML_ENABLED=true
+    depends_on:
+      ml-service:
+        condition: service_healthy
+
+volumes:
+  ml-models:
+    driver: local
+  app-data:
+    driver: local
+```
+
+---
+
+## Hostinger VPS Management
+
+### Access Methods
+
+1. **Claude Code MCP** - Automated deployment via API
+2. **hPanel Web UI** - https://hpanel.hostinger.com/vps/1256837
+3. **SSH** - `ssh root@72.61.93.6`
+
+### Useful MCP Commands
+
 ```javascript
-module.exports = {
-  apps: [{
-    name: 'signalsensehunter',
-    script: 'dist/web-index.js',
-    instances: 'max',        // Use all CPU cores
-    exec_mode: 'cluster',
-    max_memory_restart: '500M',
-    env_production: {
-      NODE_ENV: 'production',
-      PORT: 3000
-    },
-    // Auto-restart on crash
-    autorestart: true,
-    watch: false,
-    // Graceful shutdown
-    kill_timeout: 5000,
-    wait_ready: true,
-    listen_timeout: 10000,
-  }]
-};
+// List all projects
+mcp__hostinger-mcp__VPS_getProjectListV1({ virtualMachineId: 1256837 })
+
+// Get project containers and health
+mcp__hostinger-mcp__VPS_getProjectContainersV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+
+// View logs
+mcp__hostinger-mcp__VPS_getProjectLogsV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+
+// Restart project
+mcp__hostinger-mcp__VPS_restartProjectV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+
+// Stop project
+mcp__hostinger-mcp__VPS_stopProjectV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+
+// Start project
+mcp__hostinger-mcp__VPS_startProjectV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
 ```
 
-Start with: `pm2 start ecosystem.config.js --env production`
+### Firewall Management
 
-### 4. Docker Deployment
+```javascript
+// List firewalls
+mcp__hostinger-mcp__VPS_getFirewallListV1({})
 
-Create `Dockerfile`:
-```dockerfile
-FROM node:20-alpine
+// Get firewall details
+mcp__hostinger-mcp__VPS_getFirewallDetailsV1({ firewallId: YOUR_ID })
 
-WORKDIR /app
-
-# Install dependencies
-COPY package*.json ./
-RUN npm ci --production
-
-# Copy built files
-COPY dist/ ./dist/
-COPY public/ ./public/
-
-# Security: Run as non-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-USER nodejs
-
-EXPOSE 3000
-CMD ["node", "dist/web-index.js"]
-```
-
-Create `.dockerignore`:
-```
-node_modules
-src
-*.ts
-*.md
-.git
-```
-
-### 5. Nginx Reverse Proxy (Recommended)
-
-```nginx
-upstream signalsensehunter {
-    server 127.0.0.1:3000;
-    keepalive 64;
-}
-
-server {
-    listen 80;
-    server_name yourdomain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name yourdomain.com;
-
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-
-    # Gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript;
-    gzip_min_length 1000;
-
-    # Static files caching
-    location /static/ {
-        alias /app/public/;
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # WebSocket support
-    location /socket.io/ {
-        proxy_pass http://signalsensehunter;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 86400;
-    }
-
-    # API and main app
-    location / {
-        proxy_pass http://signalsensehunter;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+// Create firewall rule
+mcp__hostinger-mcp__VPS_createFirewallRuleV1({
+  firewallId: YOUR_ID,
+  protocol: "TCP",
+  port: "3001",
+  source: "any",
+  source_detail: "any"
+})
 ```
 
 ---
 
-## Performance Optimizations
+## Security Configuration
 
-### Memory Management
+### Current Firewall Rules
 
-The app implements:
-- **Rolling window data**: Only keeps last 100 price points per symbol
-- **Automatic cleanup**: Removes stale data every 5 minutes
-- **Lazy loading**: Detectors only analyze active symbols
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 22 | TCP | SSH access |
+| 80 | TCP | HTTP (redirects to HTTPS) |
+| 443 | TCP | HTTPS |
+| 3001 | TCP | Node.js application |
+| 8001 | TCP | ML service |
 
-### Bandwidth Reduction
+### Rate Limiting
 
-- **Update throttling**: 2 second intervals instead of 1
-- **Data filtering**: Only sends top N items per category
-- **Compression**: Socket.io perMessageDeflate enabled
+| Limiter | Limit | Endpoints |
+|---------|-------|-----------|
+| `apiLimiter` | 100 req/min | All `/api/*` |
+| `strictLimiter` | 10 req/min | ML training |
+| `sparklineLimiter` | 600 req/min | Price history |
 
-### CPU Optimization
+### Socket.IO Limits
 
-- **Staggered updates**: Different detectors update at different intervals
-- **Caching**: Pattern and funding data cached to avoid recalculation
-- **Clustering**: PM2 cluster mode uses all CPU cores
-
----
-
-## Security Hardening
-
-### 1. Add Security Headers
-
-Install helmet:
-```bash
-npm install helmet
-```
-
-Add to server:
-```typescript
-import helmet from 'helmet';
-app.use(helmet());
-```
-
-### 2. Rate Limiting
-
-Install express-rate-limit:
-```bash
-npm install express-rate-limit
-```
-
-Add to server:
-```typescript
-import rateLimit from 'express-rate-limit';
-app.use(rateLimit({
-  windowMs: 60000,
-  max: 100,
-}));
-```
-
-### 3. Input Validation
-
-All user inputs (filters, presets) are validated before processing.
-
-### 4. No Secrets Exposed
-
-- No API keys required (uses public Binance data)
-- No database credentials (SQLite is local)
-- Environment variables for any sensitive config
+- Max 5 connections per IP
+- 30 messages per minute per socket
+- 1MB max message size
 
 ---
 
 ## Monitoring
 
-### Health Check Endpoint
+### Health Check Endpoints
 
 ```bash
-curl http://localhost:3000/api/status
-# Returns: {"status":"connected","symbolCount":584,"uptime":123.45}
+# Main app status
+curl https://signalsense.trade/api/status
+
+# ML service health
+curl https://signalsense.trade/api/ml/status
+
+# ML feature counts
+curl https://signalsense.trade/api/ml/feature-counts
 ```
 
-### PM2 Monitoring
+### Container Logs
 
+Via MCP:
+```javascript
+mcp__hostinger-mcp__VPS_getProjectLogsV1({
+  virtualMachineId: 1256837,
+  projectName: "signalsensehunter"
+})
+```
+
+Via SSH:
 ```bash
-pm2 monit          # Real-time CPU/Memory
-pm2 logs           # View logs
-pm2 status         # Check process status
+docker logs signalsensehunter-app
+docker logs signalsensehunter-ml
 ```
-
-### Recommended Metrics
-
-- WebSocket connections count
-- Average response time
-- Memory usage
-- CPU utilization
-- Error rate
-
----
-
-## Scaling Considerations
-
-### Horizontal Scaling
-
-For high traffic:
-1. Deploy multiple instances behind a load balancer
-2. Use sticky sessions for WebSocket (Socket.io)
-3. Consider Redis adapter for Socket.io clustering
-
-### Vertical Scaling
-
-Single server capacity:
-- 2 vCPU, 2GB RAM: ~500 concurrent users
-- 4 vCPU, 4GB RAM: ~2000 concurrent users
-- 8 vCPU, 8GB RAM: ~5000 concurrent users
-
----
-
-## Cloud Deployment Options
-
-### Railway/Render (Easy)
-- Push to GitHub, auto-deploy
-- Free tier available
-- WebSocket support built-in
-
-### DigitalOcean App Platform
-```bash
-doctl apps create --spec .do/app.yaml
-```
-
-### AWS/GCP/Azure
-- Use container services (ECS, Cloud Run, AKS)
-- Add load balancer for SSL termination
-- Use managed Redis for session scaling
 
 ---
 
 ## Troubleshooting
 
-### High Memory Usage
-- Reduce `maxPriceHistory` in config
-- Decrease `maxDisplayed` to send less data
-- Increase Node.js heap: `NODE_OPTIONS="--max-old-space-size=512"`
+### Container Not Starting
 
-### Slow Response Times
-- Check Binance API rate limits
-- Enable compression in nginx
-- Reduce update interval
+1. Check logs for errors
+2. Verify port 3001/8001 not in use
+3. Check Docker memory limits
+4. Verify healthcheck commands work
 
-### WebSocket Disconnections
-- Increase nginx `proxy_read_timeout`
-- Check for proxy buffering issues
-- Enable Socket.io reconnection in client
+### 522 Connection Timeout
+
+1. Check firewall allows ports 3001, 8001
+2. Verify containers are running
+3. Check Cloudflare SSL settings
+
+### Sparklines Not Loading
+
+Rate limiter blocking requests. Ensure `sparklineLimiter` (600/min) is applied to `/api/price-history/:symbol`.
+
+### ML Service Unavailable
+
+1. Check ML container health
+2. Verify `ML_SERVICE_URL` environment variable
+3. Check ML service logs for errors
+
+### Lost ML Training Data
+
+Volumes were deleted. Restore from backup:
+```bash
+# If you have a backup
+curl -X POST https://signalsense.trade/api/ml/import-csv -d @backup.csv
+
+# Otherwise, start collecting new data
+# Training will resume after 500+ signals
+```
+
+---
+
+## Scaling
+
+### Vertical Scaling
+
+| Spec | Capacity |
+|------|----------|
+| 2 vCPU, 2GB RAM | ~500 concurrent users |
+| 4 vCPU, 4GB RAM | ~2000 concurrent users |
+| 8 vCPU, 8GB RAM | ~5000 concurrent users |
+
+### Horizontal Scaling
+
+For high traffic:
+1. Deploy multiple instances behind load balancer
+2. Use sticky sessions for WebSocket
+3. Add Redis adapter for Socket.IO clustering
 
 ---
 
