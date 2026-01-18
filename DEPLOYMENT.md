@@ -367,9 +367,29 @@ docker logs signalsensehunter-ml
 2. Verify containers are running
 3. Check Cloudflare SSL settings
 
-### Sparklines Not Loading
+### Sparklines Not Loading / Going Blank
 
-Rate limiter blocking requests. Ensure `sparklineLimiter` (600/min) is applied to `/api/price-history/:symbol`.
+**Fixed in January 2026:**
+- Error responses (rate limits) were being cached as `undefined`
+- Solution: Only cache valid history arrays, return stale cache on errors
+- Cache duration increased from 5s to 30s
+
+**Still happening? Check:**
+1. Rate limiter - `sparklineLimiter` (600/min) on `/api/price-history/:symbol`
+2. After restart - Sparklines need time to accumulate price history data
+3. Frontend cache - 30 second cache, stale data returned on errors
+
+### Rate Limiter Errors in Logs
+
+**Fixed in January 2026:**
+- `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` errors
+- Solution: `app.set('trust proxy', true)` in server.ts
+
+### Performance Tracker Won't Expand/Collapse
+
+**Fixed in January 2026:**
+- Missing CSS for initial collapsed state rotation
+- Solution: Added `.performance-section.collapsed .collapse-toggle { transform: rotate(-90deg); }`
 
 ### ML Service Unavailable
 
@@ -387,6 +407,13 @@ curl -X POST https://signalsense.trade/api/ml/import-csv -d @backup.csv
 # Otherwise, start collecting new data
 # Training will resume after 500+ signals
 ```
+
+### Deployment Actions Stuck in "Delayed"
+
+The Hostinger MCP queue can get backed up. Solutions:
+1. Wait longer (actions process sequentially)
+2. Check action status: `VPS_getActionsV1({ virtualMachineId: 1256837 })`
+3. Don't queue multiple deployments - wait for each to complete
 
 ---
 

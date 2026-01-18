@@ -218,6 +218,38 @@ SQLite persistence (sql.js) + ML Service (Python)
 - `src/web-index.ts` - Web server entry point
 - `ml-service/app/main.py` - ML service entry point
 
+### Frontend Architecture (public/index.html)
+
+The entire frontend is a single HTML file with embedded CSS and JavaScript:
+
+**Key Sections (line numbers approximate):**
+- Lines 1-3000: CSS Styles (responsive, animations, themes)
+- Lines 3100-3600: HTML Structure (dashboard layout, sections)
+- Lines 3600-3800: Collapse/Expand functionality
+- Lines 3800-4000: Sparkline chart functions
+- Lines 4000-4200: Performance tracking panel
+- Lines 4200-4600: Signal rendering functions
+- Lines 4600-5000: TOP PICKS rendering
+- Lines 5000+: Socket.IO connection and real-time updates
+
+**Key JavaScript Functions:**
+| Function | Purpose |
+|----------|---------|
+| `fetchPriceHistory(symbol)` | Fetches price data for sparklines (30s cache) |
+| `createSparkline(prices, w, h)` | Creates SVG sparkline chart |
+| `renderTopPick(pick, container)` | Renders TOP PICKS cards with sparklines |
+| `toggleCollapse(elementId)` | Toggle section collapse/expand |
+| `updatePerformancePanel(stats)` | Updates Signal Performance Tracker |
+| `renderSignalRow(signal)` | Renders individual signal rows |
+
+**CSS Classes:**
+| Class | Purpose |
+|-------|---------|
+| `.pick-sparkline` | Sparkline container in TOP PICKS |
+| `.pick-sparkline.loading` | Loading shimmer animation |
+| `.performance-section.collapsed` | Collapsed performance tracker |
+| `.collapse-toggle` | Rotation animation for collapse icons |
+
 ---
 
 ## Security Configuration
@@ -373,11 +405,64 @@ class XxxDetector {
 
 ---
 
+## Recent Fixes & Changes (January 2026)
+
+### Sparkline Intermittent Display Fix
+**Problem**: Sparklines (minicharts) would appear and disappear intermittently
+**Root Cause**: The `fetchPriceHistory` function was caching error responses (rate limit errors) as `undefined`, causing sparklines to go blank when cache was used
+**Solution** (public/index.html):
+- Increased cache duration from 5s to 30s to reduce API calls
+- Added validation to only cache valid history arrays
+- Return stale cached data on fetch errors instead of `null`
+- Added loading shimmer animation while sparklines load
+
+```javascript
+// Key fix: Only cache valid responses, fallback to stale cache on errors
+if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+  priceHistoryCache.set(symbol, { data: data.history, timestamp: Date.now() });
+  return data.history;
+}
+if (cached && cached.data) {
+  return cached.data;  // Return stale cache instead of null
+}
+```
+
+### Rate Limiter Proxy Trust Fix
+**Problem**: `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` errors in logs, rate limiter not identifying clients correctly behind Cloudflare
+**Root Cause**: Express `trust proxy` setting was not enabled
+**Solution** (src/web/server.ts):
+```typescript
+// Added before rate limiters
+this.app.set('trust proxy', true);
+```
+
+### Signal Performance Tracker Collapse Fix
+**Problem**: Collapse/expand toggle icon not rotating correctly on initial load
+**Root Cause**: Missing CSS for initial collapsed state rotation
+**Solution** (public/index.html):
+```css
+.performance-section.collapsed .collapse-toggle {
+  transform: rotate(-90deg);
+}
+.performance-section .collapse-toggle {
+  transition: transform 0.2s ease;
+}
+```
+
+---
+
 ## Troubleshooting
 
-### Sparklines Not Loading
+### Sparklines Not Loading / Going Blank
 
-Check rate limiter - `/api/price-history` needs higher limit (sparklineLimiter: 600/min)
+1. **Check rate limiter** - `/api/price-history` uses `sparklineLimiter` (600 req/min)
+2. **After deployment** - Sparklines need time to accumulate data (price history is collected from WebSocket)
+3. **Cache issues** - Frontend caches for 30 seconds, stale cache returned on errors
+4. **Verify API response**:
+```bash
+curl https://signalsense.trade/api/price-history/BTCUSDT
+# Should return: {"symbol":"BTCUSDT","history":[...],"count":30}
+```
 
 ### ML Service Not Available
 
@@ -473,9 +558,46 @@ git push origin master
 
 ## Important Patterns
 
+### Backend Patterns
 - DataStore uses rolling windows (5-60 min) with auto-trimming
 - Detectors run in parallel, results aggregated synchronously
 - SmartSignal fuses 7 components for high-confidence trades
 - ML predictions cached for 5 seconds
 - Named Docker volumes persist across deployments
 - Always use `VPS_createNewProjectV1` for code updates (preserves volumes)
+- Express `trust proxy` enabled for correct client IP detection behind Cloudflare
+
+### Frontend Patterns
+- Sparkline price history cached for 30 seconds (reduced API calls)
+- Stale cache returned on fetch errors (prevents blank sparklines)
+- Loading shimmer animation while data fetches
+- Collapse state persisted to localStorage
+- Socket.IO reconnection with exponential backoff
+
+### Rate Limiting Strategy
+- General API: 100 req/min (prevents abuse)
+- Sparklines: 600 req/min (allows ~10 symbols/second)
+- ML training: 10 req/min (expensive operations)
+- Rate limits are per-IP (requires `trust proxy` for Cloudflare)
+
+### Deployment Checklist
+1. Make changes locally
+2. `npm run build` - Compile TypeScript
+3. `git add . && git commit -m "message"` - Commit changes
+4. `git push origin master` - Push to GitHub
+5. Use `VPS_createNewProjectV1` MCP tool - Deploy (preserves volumes)
+6. Wait for containers to show "healthy" status
+7. Verify with `curl https://signalsense.trade/api/status`
+
+---
+
+## Common Issues & Solutions
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Sparklines blank | Error responses cached | Fixed: stale cache fallback |
+| Sparklines intermittent | Rate limit errors | Fixed: 30s cache, error handling |
+| Rate limiter errors in logs | Missing trust proxy | Fixed: `app.set('trust proxy', true)` |
+| Performance tracker won't expand | Missing collapse CSS | Fixed: added rotation CSS |
+| Containers not rebuilding | MCP queue delay | Wait longer, check actions status |
+| ML data lost | Deleted project | Use `createNewProjectV1` (keeps volumes) |
