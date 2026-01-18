@@ -714,6 +714,62 @@
       font-size: 12px;
     }
 
+    /* Loading State */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      color: #8b949e;
+      font-size: 12px;
+      gap: 10px;
+    }
+
+    .loading-state .loading-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #30363d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-state.training .loading-spinner {
+      border-top-color: #a371f7;
+    }
+
+    .loading-state.analyzing .loading-spinner {
+      border-top-color: #f0883e;
+    }
+
+    .loading-state.collecting .loading-spinner {
+      border-top-color: #3fb950;
+    }
+
+    .loading-state .loading-text {
+      color: #8b949e;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .loading-state.training .loading-text {
+      color: #a371f7;
+    }
+
+    .loading-state.analyzing .loading-text {
+      color: #f0883e;
+    }
+
+    .loading-state.collecting .loading-text {
+      color: #3fb950;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     /* Directional Coloring */
     .item-value.positive {
       color: #3fb950;
@@ -3633,7 +3689,7 @@
         recentSignalsCount.textContent = recentSignals.length + ' signals';
 
         if (recentSignals.length === 0) {
-          signalsTable.innerHTML = '<div class="empty-state">No signals recorded yet</div>';
+          signalsTable.innerHTML = '<div class="loading-state training"><div class="loading-spinner"></div><span class="loading-text">Collecting Training Data...</span></div>';
           return;
         }
 
@@ -4070,6 +4126,17 @@
       const div = document.createElement('div');
       div.className = 'empty-state';
       div.textContent = message;
+      panel.appendChild(div);
+    }
+
+    // Render loading state with spinner
+    // type: 'default', 'training', 'analyzing', 'collecting'
+    function renderLoadingState(panel, message, type) {
+      type = type || 'default';
+      message = message || 'Loading...';
+      const div = document.createElement('div');
+      div.className = 'loading-state ' + type;
+      div.innerHTML = '<div class="loading-spinner"></div><span class="loading-text">' + message + '</span>';
       panel.appendChild(div);
     }
 
@@ -4565,7 +4632,7 @@
         longs.forEach(function(pick) { renderTopPick(pick, topLongPicks); });
         topLongCount.textContent = longs.length;
       } else {
-        topLongPicks.innerHTML = '<div class="empty-state">No long picks available</div>';
+        topLongPicks.innerHTML = '<div class="loading-state collecting"><div class="loading-spinner"></div><span class="loading-text">Finding long picks...</span></div>';
         topLongCount.textContent = '0';
       }
 
@@ -4574,7 +4641,7 @@
         shorts.forEach(function(pick) { renderTopPick(pick, topShortPicks); });
         topShortCount.textContent = shorts.length;
       } else {
-        topShortPicks.innerHTML = '<div class="empty-state">No short picks available</div>';
+        topShortPicks.innerHTML = '<div class="loading-state collecting"><div class="loading-spinner"></div><span class="loading-text">Finding short picks...</span></div>';
         topShortCount.textContent = '0';
       }
     }
@@ -4612,7 +4679,7 @@
         data.smartSignalsLong.forEach(function(s) { renderSmartSignal(s, panels.smartLong); });
         badges.long.textContent = data.smartSignalsLong.length;
       } else {
-        renderEmptyState(panels.smartLong, 'No long signals');
+        renderLoadingState(panels.smartLong, 'Analyzing longs...', 'analyzing');
         badges.long.textContent = '0';
       }
 
@@ -4621,7 +4688,7 @@
         data.smartSignalsShort.forEach(function(s) { renderSmartSignal(s, panels.smartShort); });
         badges.short.textContent = data.smartSignalsShort.length;
       } else {
-        renderEmptyState(panels.smartShort, 'No short signals');
+        renderLoadingState(panels.smartShort, 'Analyzing shorts...', 'analyzing');
         badges.short.textContent = '0';
       }
 
@@ -4630,7 +4697,7 @@
         data.reversalSignals.forEach(function(s) { renderReversalSignal(s, panels.reversal); });
         badges.reversal.textContent = data.reversalSignals.length;
       } else {
-        renderEmptyState(panels.reversal, 'No reversal signals');
+        renderLoadingState(panels.reversal, 'Scanning reversals...', 'analyzing');
         badges.reversal.textContent = '0';
       }
 
@@ -4639,7 +4706,7 @@
         data.earlyEntries.forEach(function(s) { renderSmartSignal(s, panels.earlyEntries); });
         badges.early.textContent = data.earlyEntries.length;
       } else {
-        renderEmptyState(panels.earlyEntries, 'No early entries');
+        renderLoadingState(panels.earlyEntries, 'Detecting entries...', 'analyzing');
         badges.early.textContent = '0';
       }
 
@@ -4648,7 +4715,7 @@
         data.breakoutCandidates.forEach(function(s) { renderSmartSignal(s, panels.breakout); });
         badges.breakout.textContent = data.breakoutCandidates.length;
       } else {
-        renderEmptyState(panels.breakout, 'No breakout candidates');
+        renderLoadingState(panels.breakout, 'Scanning breakouts...', 'analyzing');
         badges.breakout.textContent = '0';
       }
 
@@ -4657,7 +4724,7 @@
         data.lowRiskSetups.forEach(function(s) { renderSmartSignal(s, panels.lowRisk); });
         badges.lowRisk.textContent = data.lowRiskSetups.length;
       } else {
-        renderEmptyState(panels.lowRisk, 'No low risk setups');
+        renderLoadingState(panels.lowRisk, 'Finding setups...', 'analyzing');
         badges.lowRisk.textContent = '0';
       }
 
@@ -4676,7 +4743,7 @@
           });
           badges.movers.textContent = data.topMovers.length;
         } else {
-          renderEmptyState(panels.topMovers);
+          renderLoadingState(panels.topMovers, 'Scanning movers...', 'collecting');
           badges.movers.textContent = '0';
         }
       } catch(e) {
@@ -4697,7 +4764,7 @@
         });
         badges.velocity.textContent = data.velocityAlerts.length;
       } else {
-        renderEmptyState(panels.velocity);
+        renderLoadingState(panels.velocity, 'Tracking velocity...', 'collecting');
         badges.velocity.textContent = '0';
       }
 
@@ -4715,7 +4782,7 @@
         });
         badges.volume.textContent = data.volumeSpikes.length;
       } else {
-        renderEmptyState(panels.volume);
+        renderLoadingState(panels.volume, 'Monitoring volume...', 'collecting');
         badges.volume.textContent = '0';
       }
 
@@ -4747,7 +4814,7 @@
         });
         badges.conviction.textContent = data.highConviction.length;
       } else {
-        renderEmptyState(panels.conviction);
+        renderLoadingState(panels.conviction, 'Calculating scores...', 'analyzing');
         badges.conviction.textContent = '0';
       }
 
@@ -4764,7 +4831,7 @@
         });
         badges.funding.textContent = data.fundingRates.length;
       } else {
-        renderEmptyState(panels.funding);
+        renderLoadingState(panels.funding, 'Fetching funding...', 'collecting');
         badges.funding.textContent = '0';
       }
 
@@ -4778,7 +4845,7 @@
         });
         badges.squeeze.textContent = data.squeezeSetups.length;
       } else {
-        renderEmptyState(panels.squeeze);
+        renderLoadingState(panels.squeeze, 'Detecting squeezes...', 'analyzing');
         badges.squeeze.textContent = '0';
       }
 
@@ -4796,7 +4863,7 @@
         });
         badges.oi.textContent = data.openInterest.length;
       } else {
-        renderEmptyState(panels.oi);
+        renderLoadingState(panels.oi, 'Tracking OI...', 'collecting');
         badges.oi.textContent = '0';
       }
 
@@ -4811,7 +4878,7 @@
         });
         badges.mtf.textContent = data.multiTimeframe.length;
       } else {
-        renderEmptyState(panels.mtf);
+        renderLoadingState(panels.mtf, 'Analyzing timeframes...', 'analyzing');
         badges.mtf.textContent = '0';
       }
 
@@ -4826,7 +4893,7 @@
         });
         badges.rsi.textContent = data.rsiExtremes.length;
       } else {
-        renderEmptyState(panels.rsi);
+        renderLoadingState(panels.rsi, 'Calculating RSI...', 'analyzing');
         badges.rsi.textContent = '0';
       }
 
@@ -4840,7 +4907,7 @@
         });
         badges.div.textContent = data.divergences.length;
       } else {
-        renderEmptyState(panels.divergence);
+        renderLoadingState(panels.divergence, 'Scanning divergences...', 'analyzing');
         badges.div.textContent = '0';
       }
 
@@ -4863,7 +4930,7 @@
         });
         badges.liq.textContent = data.liquidations.length;
       } else {
-        renderEmptyState(panels.liquidation, 'No liquidation alerts');
+        renderLoadingState(panels.liquidation, 'Monitoring liquidations...', 'collecting');
         badges.liq.textContent = '0';
       }
 
@@ -4892,7 +4959,7 @@
         });
         badges.whale.textContent = data.whaleAlerts.length;
       } else {
-        renderEmptyState(panels.whale, 'No whale activity');
+        renderLoadingState(panels.whale, 'Tracking whales...', 'collecting');
         badges.whale.textContent = '0';
       }
 
@@ -4909,7 +4976,7 @@
         });
         badges.corr.textContent = data.correlations.length;
       } else {
-        renderEmptyState(panels.correlation, 'No correlation alerts');
+        renderLoadingState(panels.correlation, 'Analyzing correlations...', 'analyzing');
         badges.corr.textContent = '0';
       }
 
@@ -4939,7 +5006,7 @@
         });
         badges.pattern.textContent = data.patterns.length;
       } else {
-        renderEmptyState(panels.pattern, 'No patterns detected');
+        renderLoadingState(panels.pattern, 'Detecting patterns...', 'analyzing');
         badges.pattern.textContent = '0';
       }
 
@@ -4952,7 +5019,7 @@
           longSignals.forEach(function(s) { renderEntrySignal(s, panels.entryLong); });
           badges.entryLong.textContent = longSignals.length;
         } else {
-          renderEmptyState(panels.entryLong, 'No long entries');
+          renderLoadingState(panels.entryLong, 'Calculating entries...', 'analyzing');
           badges.entryLong.textContent = '0';
         }
 
@@ -4960,12 +5027,12 @@
           shortSignals.forEach(function(s) { renderEntrySignal(s, panels.entryShort); });
           badges.entryShort.textContent = shortSignals.length;
         } else {
-          renderEmptyState(panels.entryShort, 'No short entries');
+          renderLoadingState(panels.entryShort, 'Calculating entries...', 'analyzing');
           badges.entryShort.textContent = '0';
         }
       } else {
-        renderEmptyState(panels.entryLong, 'No long entries');
-        renderEmptyState(panels.entryShort, 'No short entries');
+        renderLoadingState(panels.entryLong, 'Calculating entries...', 'analyzing');
+        renderLoadingState(panels.entryShort, 'Calculating entries...', 'analyzing');
         badges.entryLong.textContent = '0';
         badges.entryShort.textContent = '0';
       }
