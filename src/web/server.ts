@@ -47,6 +47,15 @@ const strictLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Higher limit for sparkline data (internal data, no external API calls)
+const sparklineLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 600, // 600 requests per minute (10 per second) - enough for all symbols
+  message: { error: 'Too many sparkline requests.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
   'https://signalsense.trade',
@@ -311,9 +320,9 @@ export class WebServer {
       res.sendFile(path.join(__dirname, '../../public/index.html'));
     });
 
-    // Price history endpoint for sparklines
-    this.app.get('/api/price-history/:symbol', (req, res) => {
-      const symbol = req.params.symbol.toUpperCase();
+    // Price history endpoint for sparklines (uses higher rate limit)
+    this.app.get('/api/price-history/:symbol', sparklineLimiter, (req, res) => {
+      const symbol = (req.params.symbol as string).toUpperCase();
       const priceHistory = this.dataStore.getPriceHistory(symbol);
 
       // Return last 30 price points for sparkline
