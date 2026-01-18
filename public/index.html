@@ -1657,6 +1657,7 @@
     @media (max-width: 768px) {
       .panels-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
       }
       .header {
         position: relative;
@@ -1670,14 +1671,15 @@
       }
       .filter-bar {
         gap: 8px;
+        flex-wrap: wrap;
       }
       .filter-select, .filter-input {
-        padding: 8px 10px;
+        padding: 10px 12px;
         font-size: 14px;
       }
       .filter-btn {
-        padding: 8px 12px;
-        font-size: 12px;
+        padding: 10px 14px;
+        font-size: 13px;
       }
       .sentiment-bar {
         padding: 10px 15px;
@@ -1689,37 +1691,186 @@
         flex-wrap: wrap;
         justify-content: center;
       }
+
+      /* Top Picks - Full width cards stacked */
       .top-picks-section {
-        margin: 0 0 10px 0;
+        margin: 0 0 12px 0;
       }
       .top-picks-header {
         flex-direction: column;
-        gap: 5px;
+        gap: 8px;
         text-align: center;
+        padding: 12px 15px;
+      }
+      .top-picks-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px;
+      }
+      .picks-column {
+        padding: 12px;
+      }
+      .picks-column-header {
+        font-size: 13px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+      }
+
+      /* Pick Items - Full card design */
+      .pick-item {
+        padding: 14px;
+        margin-bottom: 12px;
+        border-radius: 10px;
+      }
+      .pick-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .pick-header-left {
+        flex: 1;
+        min-width: 0;
+      }
+      .pick-symbol {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .pick-sparkline {
+        width: 80px;
+        height: 28px;
+      }
+      .pick-score {
+        font-size: 13px;
+        padding: 4px 10px;
+      }
+      .pick-funding {
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .pick-funding-badge {
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+      .pick-meta {
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .pick-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+      .pick-levels {
+        gap: 16px;
+        font-size: 11px;
+        padding-top: 10px;
+        flex-wrap: wrap;
+      }
+      .pick-level {
+        gap: 6px;
+      }
+      .pick-reasons {
+        font-size: 11px;
+        margin-top: 10px;
+        line-height: 1.5;
+      }
+
+      /* Panel improvements */
+      .panel {
+        border-radius: 10px;
       }
       .panel-header {
-        padding: 10px 12px;
+        padding: 12px 14px;
       }
       .panel-title {
-        font-size: 12px;
+        font-size: 13px;
       }
+      .panel-content {
+        padding: 10px;
+        max-height: 350px;
+      }
+
+      /* Item cards - full width readable */
+      .item {
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .item-left {
+        flex: 1;
+        min-width: 0;
+      }
+      .item-symbol {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .item-meta {
+        font-size: 11px;
+      }
+      .item-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .item-value {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .item-sparkline {
+        width: 70px;
+        height: 24px;
+      }
+
+      /* Smart Items - full card design */
+      .smart-item {
+        padding: 14px;
+        margin-bottom: 12px;
+        border-radius: 10px;
+      }
+      .smart-item-header {
+        margin-bottom: 10px;
+      }
+      .smart-item-symbol {
+        font-size: 15px;
+      }
+      .smart-item-direction {
+        font-size: 12px;
+        padding: 4px 10px;
+      }
+      .smart-item-confidence {
+        margin-bottom: 10px;
+      }
+      .confidence-value {
+        font-size: 13px;
+      }
+      .smart-item-meta {
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .meta-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+      .smart-item-reasons {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      /* Reversal items */
+      .reversal-item {
+        padding: 14px;
+        margin-bottom: 12px;
+        border-radius: 10px;
+      }
+
       .notification-container {
         left: 10px;
         right: 10px;
         max-width: none;
       }
-      .smart-item {
-        padding: 8px 10px;
-      }
-      .smart-item-symbol {
-        font-size: 13px;
-      }
-      .pick-item {
-        padding: 8px 10px;
-      }
-      .pick-symbol {
-        font-size: 13px;
-      }
+
       /* Disable drag on mobile */
       .panel {
         cursor: default !important;
@@ -1730,6 +1881,29 @@
       .layout-indicator {
         display: none;
       }
+
+      /* Section headers */
+      .section-header {
+        padding: 12px 14px;
+      }
+      .section-title {
+        font-size: 13px;
+      }
+
+      /* Performance section */
+      .performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .performance-stat {
+        padding: 12px;
+      }
+      .performance-stat-value {
+        font-size: 18px;
+      }
+      .performance-stat-label {
+        font-size: 10px;
+      }
     }
 
     /* Mobile Portrait (480px and below) */
@@ -1738,67 +1912,179 @@
         font-size: 14px;
       }
       .header {
-        padding: 8px 10px;
+        padding: 10px 12px;
       }
       .logo h1 {
         font-size: 14px;
       }
       .status-bar {
         font-size: 11px;
-        gap: 10px;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .status-bar > div {
+        white-space: nowrap;
       }
       .filter-bar {
-        padding: 8px 10px;
+        padding: 10px 12px;
       }
       .filter-label {
         display: none;
       }
+      .filter-group {
+        width: 100%;
+      }
       .filter-select, .filter-input {
         flex: 1;
         min-width: 0;
-        font-size: 13px;
+        font-size: 14px;
+        padding: 12px;
       }
       .filter-btn {
-        font-size: 11px;
-        padding: 6px 10px;
+        font-size: 12px;
+        padding: 10px 14px;
+        min-height: 44px;
       }
       .main-container {
-        padding: 8px;
-        gap: 10px;
+        padding: 10px;
+        gap: 12px;
       }
+
+      /* Panels */
       .panel {
-        border-radius: 8px;
+        border-radius: 10px;
       }
       .panel-content {
-        padding: 8px;
-        max-height: 220px;
+        padding: 10px;
+        max-height: 300px;
       }
+
+      /* Items - ensure no text squeezing */
       .item {
-        padding: 6px 8px;
+        padding: 14px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .item-left {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .item-right {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding-top: 8px;
+        border-top: 1px solid #21262d;
       }
       .item-symbol {
-        font-size: 12px;
+        font-size: 15px;
       }
       .item-value {
-        font-size: 12px;
+        font-size: 15px;
+      }
+      .item-sparkline {
+        width: 80px;
+        height: 26px;
+      }
+
+      /* Smart items - vertical layout for readability */
+      .smart-item {
+        padding: 14px;
       }
       .smart-item-header {
-        flex-wrap: wrap;
-        gap: 4px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .smart-item-symbol {
+        font-size: 16px;
+      }
+      .smart-item-direction {
+        align-self: flex-start;
       }
       .smart-item-meta {
-        gap: 4px;
+        flex-wrap: wrap;
+        gap: 6px;
       }
       .meta-tag {
-        font-size: 9px;
-        padding: 2px 4px;
+        font-size: 11px;
+        padding: 4px 8px;
       }
+      .smart-item-reasons {
+        font-size: 12px;
+      }
+
+      /* Pick items - full card with vertical sections */
+      .pick-item {
+        padding: 14px;
+      }
+      .pick-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .pick-header-left {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .pick-sparkline {
+        width: 90px;
+        height: 30px;
+      }
+      .pick-symbol {
+        font-size: 16px;
+      }
+      .pick-score {
+        font-size: 14px;
+        padding: 6px 12px;
+      }
+      .pick-funding {
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+      .pick-meta {
+        flex-wrap: wrap;
+      }
+      .pick-tag {
+        font-size: 11px;
+        padding: 5px 10px;
+      }
+      .pick-levels {
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .pick-level {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        padding: 6px 0;
+        border-bottom: 1px solid #21262d;
+      }
+      .pick-level:last-child {
+        border-bottom: none;
+      }
+      .pick-reasons {
+        font-size: 12px;
+      }
+
+      /* Sentiment bar */
       .sentiment-bar {
-        padding: 8px 10px;
+        padding: 10px 12px;
+        flex-direction: column;
+        gap: 10px;
       }
       .sentiment-gauge {
         flex-wrap: wrap;
         justify-content: center;
+        gap: 10px;
       }
       .sentiment-meter {
         width: 100px;
@@ -1845,40 +2131,101 @@
       .logo h1 {
         font-size: 12px;
       }
+      .logo span {
+        display: none;
+      }
       .filter-group {
         width: 100%;
       }
       .filter-select {
         width: 100%;
       }
+      .status-bar {
+        font-size: 10px;
+        gap: 6px;
+      }
       .status-bar > div {
         font-size: 10px;
+      }
+      .visitor-counter {
+        display: none;
+      }
+      .main-container {
+        padding: 8px;
+      }
+      .panel-content {
+        padding: 8px;
+      }
+      .item {
+        padding: 12px;
+      }
+      .smart-item {
+        padding: 12px;
+      }
+      .pick-item {
+        padding: 12px;
+      }
+      .pick-symbol {
+        font-size: 14px;
+      }
+      .pick-score {
+        font-size: 12px;
+        padding: 4px 10px;
+      }
+      .pick-tag {
+        font-size: 10px;
+        padding: 3px 6px;
+      }
+      .meta-tag {
+        font-size: 10px;
+        padding: 3px 6px;
+      }
+      .top-picks-grid {
+        padding: 10px;
+        gap: 10px;
+      }
+      .picks-column {
+        padding: 10px;
       }
     }
 
     /* Touch-friendly improvements */
     @media (hover: none) and (pointer: coarse) {
       .item {
-        padding: 10px 12px;
-        margin-bottom: 8px;
+        padding: 14px;
+        margin-bottom: 10px;
+        min-height: 48px;
       }
       .smart-item {
-        padding: 12px;
-        margin-bottom: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
       }
       .filter-btn {
-        min-height: 44px;
-        min-width: 44px;
+        min-height: 48px;
+        min-width: 48px;
       }
       .filter-select, .filter-input {
-        min-height: 44px;
+        min-height: 48px;
       }
       .pick-item {
-        padding: 12px;
-        margin-bottom: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
       }
       .notification-toast {
-        padding: 14px 16px;
+        padding: 16px 18px;
+      }
+      .panel-header {
+        min-height: 48px;
+      }
+      .section-header {
+        min-height: 48px;
+      }
+      /* Better tap targets */
+      .collapse-toggle {
+        padding: 8px;
+      }
+      .pick-level {
+        padding: 8px 0;
       }
     }
 
