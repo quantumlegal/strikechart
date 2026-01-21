@@ -5,7 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { CoinGeckoClient, PriceData, ChartDataPoint, Exchange } from './coingeckoClient.js';
+import { CoinGeckoClient, PriceData, ChartDataPoint, Exchange, CommunityData } from './coingeckoClient.js';
 import { EtherscanClient, TokenTransfer } from './etherscanClient.js';
 import { config } from '../config.js';
 
@@ -38,6 +38,9 @@ export interface OmniaData {
   // On-chain data
   recentTransfers: TokenTransfer[];
   whaleAlerts: WhaleAlert[];
+
+  // Community & Social data
+  community: CommunityData | null;
 
   // Meta
   lastUpdated: number;
@@ -109,6 +112,7 @@ export class OmniaTracker extends EventEmitter {
       exchanges: [],
       recentTransfers: [],
       whaleAlerts: [],
+      community: null,
       lastUpdated: 0,
       priceLastUpdated: 0,
       transfersLastUpdated: 0,
@@ -190,6 +194,12 @@ export class OmniaTracker extends EventEmitter {
       const exchanges = await this.coingeckoClient.getExchangeTickers();
       if (exchanges.length > 0) {
         this.currentData.exchanges = exchanges;
+      }
+
+      // Fetch community data
+      const community = await this.coingeckoClient.getCommunityData();
+      if (community) {
+        this.currentData.community = community;
       }
 
       this.currentData.lastUpdated = Date.now();
@@ -323,6 +333,13 @@ export class OmniaTracker extends EventEmitter {
     }
 
     return alerts.slice(0, limit);
+  }
+
+  /**
+   * Get community and social data
+   */
+  getCommunityData(): CommunityData | null {
+    return this.currentData.community;
   }
 
   /**

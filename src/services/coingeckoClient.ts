@@ -31,6 +31,17 @@ export interface Exchange {
   trustScore: string;
   tradeUrl: string;
   lastUpdated: number;
+  exchangeType: 'cex' | 'dex';
+}
+
+export interface CommunityData {
+  twitterFollowers: number;
+  telegramMembers: number;
+  redditSubscribers: number;
+  watchlistUsers: number;
+  sentimentVotesUp: number;
+  sentimentVotesDown: number;
+  sentimentPercent: number;
 }
 
 export interface CoinGeckoMarketData {
@@ -222,6 +233,55 @@ export class CoinGeckoClient {
   }
 
   /**
+   * Format trading pair - clean up contract addresses to readable names
+   */
+  private formatPair(base: string, target: string, marketName: string): string {
+    // Known token mappings for contract addresses
+    const tokenMap: Record<string, string> = {
+      'WETH': 'WETH',
+      'USDT': 'USDT',
+      'USDC': 'USDC',
+      'WBNB': 'WBNB',
+      'BNB': 'BNB',
+      'ETH': 'ETH',
+    };
+
+    // Clean up base token
+    let cleanBase = base;
+    if (base.startsWith('0X') || base.startsWith('0x')) {
+      cleanBase = 'OMNIA'; // Assume it's OMNIA if contract address
+    }
+
+    // Clean up target token
+    let cleanTarget = target;
+    if (target.startsWith('0X') || target.startsWith('0x')) {
+      // Try to identify common tokens by market context
+      if (marketName.toLowerCase().includes('uniswap') || marketName.toLowerCase().includes('ethereum')) {
+        cleanTarget = 'WETH';
+      } else if (marketName.toLowerCase().includes('pancake') || marketName.toLowerCase().includes('bsc')) {
+        cleanTarget = 'WBNB';
+      } else {
+        cleanTarget = 'USD';
+      }
+    }
+
+    // Apply token map
+    cleanBase = tokenMap[cleanBase.toUpperCase()] || cleanBase;
+    cleanTarget = tokenMap[cleanTarget.toUpperCase()] || cleanTarget;
+
+    return `${cleanBase}/${cleanTarget}`;
+  }
+
+  /**
+   * Determine if exchange is DEX or CEX
+   */
+  private getExchangeType(marketName: string): 'cex' | 'dex' {
+    const dexNames = ['uniswap', 'pancake', 'sushiswap', 'dodo', 'curve', 'balancer', 'quickswap', 'spookyswap'];
+    const lowerName = marketName.toLowerCase();
+    return dexNames.some(dex => lowerName.includes(dex)) ? 'dex' : 'cex';
+  }
+
+  /**
    * Get exchange listings and tickers for OMNIA
    */
   async getExchangeTickers(): Promise<Exchange[]> {
@@ -249,7 +309,7 @@ export class CoinGeckoClient {
 
       const exchanges: Exchange[] = tickers.map((ticker) => ({
         name: ticker.market.name,
-        pair: `${ticker.base}/${ticker.target}`,
+        pair: this.formatPair(ticker.base, ticker.target, ticker.market.name),
         price: ticker.last,
         volume24h: ticker.converted_volume?.usd || 0,
         volumePercent: totalVolume > 0
@@ -258,6 +318,7 @@ export class CoinGeckoClient {
         trustScore: ticker.trust_score || 'low',
         tradeUrl: ticker.trade_url || '',
         lastUpdated: new Date(ticker.timestamp).getTime(),
+        exchangeType: this.getExchangeType(ticker.market.name),
       }));
 
       // Sort by volume
@@ -268,6 +329,45 @@ export class CoinGeckoClient {
     } catch (error) {
       console.warn('[CoinGecko] Tickers fetch error:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get community and social data for OMNIA
+   */
+  async getCommunityData(): Promise<CommunityData | null> {
+    const cacheKey = 'community';
+    const cached = this.getCached<CommunityData>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const url = `${this.baseUrl}/coins/${this.coinId}?localization=false&tickers=false&market_data=false&community_data=true&developer_data=false&sparkline=false`;
+      const response = await this.rateLimitedFetch(url);
+
+      if (!response.ok) {
+        console.warn(`[CoinGecko] Community data fetch failed: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      const community = data.community_data || {};
+      const sentiment = data.sentiment_votes_up_percentage || 50;
+
+      const communityData: CommunityData = {
+        twitterFollowers: community.twitter_followers || 0,
+        telegramMembers: community.telegram_channel_user_count || 0,
+        redditSubscribers: community.reddit_subscribers || 0,
+        watchlistUsers: data.watchlist_portfolio_users || 0,
+        sentimentVotesUp: data.sentiment_votes_up_percentage || 0,
+        sentimentVotesDown: data.sentiment_votes_down_percentage || 0,
+        sentimentPercent: sentiment,
+      };
+
+      this.setCache(cacheKey, communityData);
+      return communityData;
+    } catch (error) {
+      console.warn('[CoinGecko] Community data fetch error:', error);
+      return null;
     }
   }
 

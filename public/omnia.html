@@ -619,6 +619,103 @@
       font-size: 10px;
     }
 
+    /* Community Stats */
+    .community-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .community-stat {
+      background: #21262d;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .community-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #c9d1d9;
+      margin-bottom: 4px;
+    }
+
+    .community-stat-label {
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    .sentiment-bar {
+      height: 8px;
+      background: #21262d;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .sentiment-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e 0%, #22c55e 100%);
+      transition: width 0.3s ease;
+    }
+
+    /* Twitter Embed */
+    .twitter-container {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 400px;
+    }
+
+    .twitter-timeline-wrapper {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    /* Data source note */
+    .data-source {
+      font-size: 11px;
+      color: #6e7681;
+      text-align: center;
+      padding: 8px;
+      border-top: 1px solid #21262d;
+      margin-top: 12px;
+    }
+
+    .data-source a {
+      color: #8b949e;
+      text-decoration: none;
+    }
+
+    .data-source a:hover {
+      color: #c9d1d9;
+      text-decoration: underline;
+    }
+
+    /* Grid 3 columns for social section */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1200px) {
+      .grid-3 {
+        grid-template-columns: 1fr 1fr;
+      }
+      .community-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .price-display {
@@ -803,10 +900,100 @@
               Etherscan
             </a>
           </div>
+          <div class="data-source">
+            Price data from <a href="https://www.coingecko.com/en/coins/omnia-protocol" target="_blank">CoinGecko</a> (DEX aggregated)
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Twitter Feed and Community Stats -->
+    <div class="grid-2">
+      <!-- Twitter/X Feed -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865l8.875 11.633Z"/></svg>
+            @omnia_protocol
+          </span>
+          <div class="live-indicator">
+            <span class="live-dot"></span>
+            Live
+          </div>
+        </div>
+        <div class="card-body" style="padding: 0;">
+          <div class="twitter-container">
+            <a class="twitter-timeline"
+               data-theme="dark"
+               data-chrome="noheader nofooter noborders transparent"
+               data-height="400"
+               href="https://twitter.com/omnia_protocol?ref_src=twsrc%5Etfw">
+              Loading tweets...
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Community Stats -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Community Stats</span>
+        </div>
+        <div class="card-body">
+          <div class="community-stats">
+            <div class="community-stat">
+              <div class="community-stat-value" id="twitterFollowers">-</div>
+              <div class="community-stat-label">Twitter Followers</div>
+            </div>
+            <div class="community-stat">
+              <div class="community-stat-value" id="telegramMembers">-</div>
+              <div class="community-stat-label">Telegram Members</div>
+            </div>
+            <div class="community-stat">
+              <div class="community-stat-value" id="watchlistUsers">-</div>
+              <div class="community-stat-label">CoinGecko Watchlist</div>
+            </div>
+            <div class="community-stat">
+              <div class="community-stat-value" id="sentimentDisplay">-</div>
+              <div class="community-stat-label">Bullish Sentiment</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; color: #8b949e;">Market Sentiment</span>
+              <span style="font-size: 12px; color: #22c55e;" id="sentimentPercent">50%</span>
+            </div>
+            <div class="sentiment-bar">
+              <div class="sentiment-fill" id="sentimentBar" style="width: 50%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+              <span style="font-size: 10px; color: #ef4444;">Bearish</span>
+              <span style="font-size: 10px; color: #22c55e;">Bullish</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #30363d;">
+            <div style="font-size: 12px; color: #8b949e; margin-bottom: 12px;">Quick Links</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <a href="https://www.coingecko.com/en/coins/omnia-protocol" target="_blank" rel="noopener" class="social-link" style="padding: 8px 12px; font-size: 12px;">
+                CoinGecko
+              </a>
+              <a href="https://coinmarketcap.com/currencies/omnia-protocol/" target="_blank" rel="noopener" class="social-link" style="padding: 8px 12px; font-size: 12px;">
+                CoinMarketCap
+              </a>
+              <a href="https://dexscreener.com/ethereum/0x75780415fca0157e4814a1a2588f1ee9ff0f7e88" target="_blank" rel="noopener" class="social-link" style="padding: 8px 12px; font-size: 12px;">
+                DexScreener
+              </a>
+            </div>
+          </div>
         </div>
       </section>
     </div>
   </div>
+
+  <!-- Twitter Widget Script -->
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
   <script>
     // State
@@ -845,6 +1032,9 @@
         updateExchanges(data.exchanges);
         updateTransfers(data.recentTransfers);
         updateLastUpdate(data.lastUpdated);
+        if (data.community) {
+          updateCommunityStats(data.community);
+        }
       });
 
       socket.on('omnia:whale', function(alert) {
@@ -868,12 +1058,67 @@
           updateTransfers(data.recentTransfers);
           renderWhaleAlerts(data.whaleAlerts);
           updateLastUpdate(data.lastUpdated);
+          // Update community stats if available
+          if (data.community) {
+            updateCommunityStats(data.community);
+          }
         }
 
         // Fetch chart data
         await fetchChartData(currentTimeframe);
+
+        // Fetch community data separately if not in main data
+        fetchCommunityData();
       } catch (error) {
         // Log silently in production
+      }
+    }
+
+    // Fetch community data
+    async function fetchCommunityData() {
+      try {
+        var res = await fetch('/api/omnia/community');
+        if (res.ok) {
+          var data = await res.json();
+          updateCommunityStats(data);
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    }
+
+    // Update community stats display
+    function updateCommunityStats(data) {
+      var twitterEl = document.getElementById('twitterFollowers');
+      var telegramEl = document.getElementById('telegramMembers');
+      var watchlistEl = document.getElementById('watchlistUsers');
+      var sentimentEl = document.getElementById('sentimentDisplay');
+      var sentimentPercentEl = document.getElementById('sentimentPercent');
+      var sentimentBar = document.getElementById('sentimentBar');
+
+      if (twitterEl) {
+        twitterEl.textContent = formatNumber(data.twitterFollowers || 0);
+      }
+      if (telegramEl) {
+        telegramEl.textContent = formatNumber(data.telegramMembers || 0);
+      }
+      if (watchlistEl) {
+        watchlistEl.textContent = formatNumber(data.watchlistUsers || 0);
+      }
+
+      var sentiment = data.sentimentPercent || 50;
+      if (sentimentEl) {
+        sentimentEl.textContent = sentiment.toFixed(0) + '%';
+      }
+      if (sentimentPercentEl) {
+        sentimentPercentEl.textContent = sentiment.toFixed(0) + '% Bullish';
+        sentimentPercentEl.style.color = sentiment >= 50 ? '#22c55e' : '#ef4444';
+      }
+      if (sentimentBar) {
+        sentimentBar.style.width = sentiment + '%';
+        sentimentBar.style.background = sentiment >= 50
+          ? 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)'
+          : 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)';
       }
     }
 

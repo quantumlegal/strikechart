@@ -555,6 +555,20 @@ export class WebServer {
       });
     });
 
+    // OMNIA community and social data
+    this.app.get('/api/omnia/community', (req, res) => {
+      const community = this.omniaTracker.getCommunityData();
+      res.json(community || {
+        twitterFollowers: 0,
+        telegramMembers: 0,
+        redditSubscribers: 0,
+        watchlistUsers: 0,
+        sentimentVotesUp: 0,
+        sentimentVotesDown: 0,
+        sentimentPercent: 50,
+      });
+    });
+
     // OMNIA contract and social info
     this.app.get('/api/omnia/info', (req, res) => {
       res.json(this.omniaTracker.getContractInfo());
