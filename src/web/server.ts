@@ -26,6 +26,7 @@ import { ConnectionStatus } from '../binance/types.js';
 import { StorageManager } from '../storage/sqlite.js';
 import { MLServiceClient } from '../services/mlClient.js';
 import { FeatureExtractor } from '../services/featureExtractor.js';
+import { OmniaTracker } from '../services/omniaTracker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -109,6 +110,9 @@ export class WebServer {
   private mlClient: MLServiceClient;
   private featureExtractor: FeatureExtractor | null = null;
 
+  // OMNIA Protocol Tracker
+  private omniaTracker: OmniaTracker;
+
   constructor(
     private dataStore: DataStore,
     private opportunityRanker: OpportunityRanker,
@@ -187,6 +191,10 @@ export class WebServer {
       config.ml.timeout,
       config.ml.enabled
     );
+
+    // Initialize OMNIA Protocol Tracker
+    this.omniaTracker = new OmniaTracker();
+    this.setupOmniaEvents();
 
     this.setupRoutes();
     this.setupSocketIO();
@@ -447,6 +455,131 @@ export class WebServer {
     this.app.get('/api/ml/feature-counts', (req, res) => {
       res.json(this.winRateTracker.getFeatureCounts());
     });
+
+    // ============== OMNIA Protocol API Endpoints ==============
+
+    // OMNIA service status
+    this.app.get('/api/omnia/status', (req, res) => {
+      res.json(this.omniaTracker.getStatus());
+    });
+
+    // OMNIA current price and market data
+    this.app.get('/api/omnia/price', (req, res) => {
+      const data = this.omniaTracker.getData();
+      res.json({
+        price: data.price,
+        priceChange24h: data.priceChange24h,
+        priceChangePercent24h: data.priceChangePercent24h,
+        marketCap: data.marketCap,
+        volume24h: data.volume24h,
+        circulatingSupply: data.circulatingSupply,
+        totalSupply: data.totalSupply,
+        ath: data.ath,
+        athChangePercent: data.athChangePercent,
+        lastUpdated: data.priceLastUpdated,
+      });
+    });
+
+    // OMNIA price chart data
+    this.app.get('/api/omnia/chart/:timeframe', async (req, res) => {
+      const tf = req.params.timeframe;
+      let days = 7;
+
+      switch (tf) {
+        case '24h':
+          days = 1;
+          break;
+        case '7d':
+          days = 7;
+          break;
+        case '30d':
+          days = 30;
+          break;
+        default:
+          days = 7;
+      }
+
+      try {
+        const chartData = await this.omniaTracker.getChartData(days);
+        res.json({
+          timeframe: tf,
+          days,
+          data: chartData,
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch chart data' });
+      }
+    });
+
+    // OMNIA exchange listings
+    this.app.get('/api/omnia/exchanges', (req, res) => {
+      const data = this.omniaTracker.getData();
+      res.json({
+        exchanges: data.exchanges,
+        count: data.exchanges.length,
+        lastUpdated: data.priceLastUpdated,
+      });
+    });
+
+    // OMNIA recent transfers
+    this.app.get('/api/omnia/transfers', (req, res) => {
+      const data = this.omniaTracker.getData();
+      const formatted = data.recentTransfers.map(t => ({
+        ...t,
+        display: this.omniaTracker.formatTransfer(t),
+      }));
+
+      res.json({
+        transfers: formatted,
+        count: formatted.length,
+        lastUpdated: data.transfersLastUpdated,
+      });
+    });
+
+    // OMNIA whale alerts
+    this.app.get('/api/omnia/whales', (req, res) => {
+      const severity = req.query.severity as string | undefined;
+      const validSeverities = ['info', 'warning', 'critical'];
+      const filterSeverity = severity && validSeverities.includes(severity)
+        ? severity as 'info' | 'warning' | 'critical'
+        : undefined;
+
+      const alerts = this.omniaTracker.getWhaleAlerts(filterSeverity, 50);
+
+      res.json({
+        alerts: alerts.map(a => ({
+          ...a,
+          display: this.omniaTracker.formatTransfer(a.transfer),
+        })),
+        count: alerts.length,
+      });
+    });
+
+    // OMNIA contract and social info
+    this.app.get('/api/omnia/info', (req, res) => {
+      res.json(this.omniaTracker.getContractInfo());
+    });
+
+    // OMNIA full data snapshot
+    this.app.get('/api/omnia/data', (req, res) => {
+      const data = this.omniaTracker.getData();
+      res.json(data);
+    });
+
+    // Force refresh OMNIA data
+    this.app.post('/api/omnia/refresh', strictLimiter, async (req, res) => {
+      try {
+        await this.omniaTracker.refresh();
+        res.json({ success: true, message: 'OMNIA data refreshed' });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to refresh data' });
+      }
+    });
+
+    // Serve OMNIA tracking page
+    this.app.get('/omnia', (req, res) => {
+      res.sendFile(path.join(__dirname, '../../public/omnia.html'));
+    });
   }
 
   private setupSocketIO(): void {
@@ -573,6 +706,21 @@ export class WebServer {
     this.io.emit('visitorCount', {
       online: this.visitorCount,
       total: this.totalVisitors,
+    });
+  }
+
+  private setupOmniaEvents(): void {
+    // Forward OMNIA tracker events to Socket.IO clients
+    this.omniaTracker.on('update', (data) => {
+      this.io.emit('omnia:update', data);
+    });
+
+    this.omniaTracker.on('whaleAlert', (alert) => {
+      this.io.emit('omnia:whale', alert);
+    });
+
+    this.omniaTracker.on('transfer', (transfer) => {
+      this.io.emit('omnia:transfer', transfer);
     });
   }
 
@@ -733,10 +881,20 @@ export class WebServer {
     return this.smartSignalEngine;
   }
 
-  start(): Promise<void> {
+  async start(): Promise<void> {
     return new Promise((resolve) => {
-      this.server.listen(this.port, () => {
+      this.server.listen(this.port, async () => {
         console.log(`Web dashboard running at http://localhost:${this.port}`);
+
+        // Start OMNIA Protocol tracking
+        if (config.omnia?.enabled) {
+          try {
+            await this.omniaTracker.start();
+          } catch (error) {
+            console.warn('[WebServer] Failed to start OMNIA tracker:', error);
+          }
+        }
+
         resolve();
       });
     });
@@ -744,6 +902,9 @@ export class WebServer {
 
   stop(): Promise<void> {
     return new Promise((resolve) => {
+      // Stop OMNIA tracker
+      this.omniaTracker.stop();
+
       this.io.close();
       this.server.close(() => {
         resolve();

@@ -86,4 +86,16 @@ export const config = {
     healthCheckInterval: 30000, // 30 seconds
     cacheTTL: 5000, // 5 second cache
   },
+
+  // OMNIA Protocol Tracker configuration
+  omnia: {
+    enabled: process.env.OMNIA_ENABLED !== 'false',
+    coingeckoApiKey: process.env.COINGECKO_API_KEY || '',
+    etherscanApiKey: process.env.ETHERSCAN_API_KEY || '',
+    bscscanApiKey: process.env.BSCSCAN_API_KEY || '',
+    contractAddress: '0x75780415fca0157e4814a1a2588f1ee9ff0f7e88',
+    priceUpdateInterval: Number(process.env.OMNIA_PRICE_INTERVAL) || 60000, // 60 seconds
+    transferUpdateInterval: Number(process.env.OMNIA_TRANSFER_INTERVAL) || 30000, // 30 seconds
+    whaleThreshold: Number(process.env.OMNIA_WHALE_THRESHOLD) || 100000, // Alert if > 100K OMNIA
+  },
 };

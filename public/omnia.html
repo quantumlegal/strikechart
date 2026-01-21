@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OMNIA Protocol Tracker - Signal Sense Hunter</title>
+  <meta name="description" content="Track OMNIA Protocol ($OMNIA) price, exchanges, whale movements, and on-chain activity in real-time.">
+  <meta name="theme-color" content="#0a0e17">
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0e17;
+      color: #e1e5eb;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo h1 {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .back-link {
+      color: #8b949e;
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: #c9d1d9;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 13px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Price Hero Section */
+    .price-hero {
+      background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .price-main {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .token-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .token-name h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #c9d1d9;
+    }
+
+    .token-ticker {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .price-display {
+      font-size: 42px;
+      font-weight: 700;
+      color: #f0f6fc;
+    }
+
+    .price-change {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .price-change.positive {
+      color: #22c55e;
+    }
+
+    .price-change.negative {
+      color: #ef4444;
+    }
+
+    .price-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: #21262d;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #c9d1d9;
+    }
+
+    .stat-value.ath-down {
+      color: #f85149;
+    }
+
+    /* Grid Layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .price-hero {
+        grid-template-columns: 1fr;
+      }
+      .price-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Card */
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: #21262d;
+      padding: 12px 16px;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #c9d1d9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-badge {
+      background: #8b5cf6;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #22c55e;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .card-body {
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .card-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .card-body::-webkit-scrollbar-track {
+      background: #161b22;
+    }
+
+    .card-body::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 3px;
+    }
+
+    /* Chart Section */
+    .chart-container {
+      height: 300px;
+      position: relative;
+    }
+
+    .chart-timeframe {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tf-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tf-btn:hover {
+      background: #30363d;
+      color: #c9d1d9;
+    }
+
+    .tf-btn.active {
+      background: #8b5cf6;
+      border-color: #8b5cf6;
+      color: white;
+    }
+
+    /* Exchange Table */
+    .exchange-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .exchange-table th,
+    .exchange-table td {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .exchange-table th {
+      color: #8b949e;
+      font-weight: 500;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .exchange-table td {
+      border-bottom: 1px solid #21262d;
+    }
+
+    .exchange-table tr:hover td {
+      background: #21262d;
+    }
+
+    .exchange-name {
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+
+    .trust-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .trust-badge.green {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .trust-badge.yellow {
+      background: rgba(234, 179, 8, 0.2);
+      color: #eab308;
+    }
+
+    .trust-badge.red {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    /* Transfer Feed */
+    .transfer-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .transfer-item:last-child {
+      border-bottom: none;
+    }
+
+    .transfer-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .transfer-icon.deposit {
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .transfer-icon.withdrawal {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .transfer-icon.transfer {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .transfer-icon.whale {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    .transfer-details {
+      flex: 1;
+    }
+
+    .transfer-addresses {
+      font-size: 13px;
+      color: #c9d1d9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .transfer-amount {
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .transfer-amount span {
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+
+    .transfer-time {
+      font-size: 11px;
+      color: #6e7681;
+    }
+
+    /* Whale Alerts */
+    .whale-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .whale-alert:last-child {
+      margin-bottom: 0;
+    }
+
+    .whale-alert.info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .whale-alert.warning {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .whale-alert.critical {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .whale-icon {
+      font-size: 24px;
+    }
+
+    .whale-content {
+      flex: 1;
+    }
+
+    .whale-message {
+      font-size: 13px;
+      color: #c9d1d9;
+      margin-bottom: 4px;
+    }
+
+    .whale-time {
+      font-size: 11px;
+      color: #6e7681;
+    }
+
+    /* Social Links */
+    .social-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #21262d;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #c9d1d9;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .social-link:hover {
+      background: #30363d;
+      color: #f0f6fc;
+    }
+
+    .social-link svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Contract Info */
+    .contract-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .contract-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #21262d;
+      border-radius: 8px;
+    }
+
+    .contract-label {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .contract-value {
+      font-size: 13px;
+      color: #c9d1d9;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #30363d;
+      color: #c9d1d9;
+    }
+
+    /* Loading States */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100px;
+      color: #8b949e;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #30363d;
+      border-top-color: #8b5cf6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #8b949e;
+    }
+
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    /* Chart SVG */
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-line {
+      fill: none;
+      stroke: #8b5cf6;
+      stroke-width: 2;
+    }
+
+    .chart-area {
+      fill: url(#chartGradient);
+    }
+
+    .chart-grid line {
+      stroke: #21262d;
+      stroke-width: 1;
+    }
+
+    .chart-axis text {
+      fill: #8b949e;
+      font-size: 10px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .price-display {
+        font-size: 32px;
+      }
+
+      .price-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .status-bar {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <a href="/" class="back-link">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+        </svg>
+        Back to Dashboard
+      </a>
+      <h1>OMNIA Protocol Tracker</h1>
+    </div>
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="connectionStatus">Connecting...</span>
+      </div>
+      <div id="lastUpdate" style="color: #8b949e; font-size: 12px;"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Price Hero Section -->
+    <section class="price-hero">
+      <div class="price-main">
+        <div class="token-name">
+          <h2>OMNIA Protocol</h2>
+          <span class="token-ticker">$OMNIA</span>
+        </div>
+        <div class="price-display" id="currentPrice">$0.00000</div>
+        <div class="price-change" id="priceChange">+0.00%</div>
+      </div>
+      <div class="price-stats">
+        <div class="stat-card">
+          <div class="stat-label">Market Cap</div>
+          <div class="stat-value" id="marketCap">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">24h Volume</div>
+          <div class="stat-value" id="volume24h">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Circulating</div>
+          <div class="stat-value" id="circulatingSupply">0 / 100M</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ATH</div>
+          <div class="stat-value ath-down" id="athDisplay">$1.77 (-99.8%)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chart Section -->
+    <section class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <span class="card-title">Price Chart</span>
+        <div class="chart-timeframe">
+          <button class="tf-btn" data-tf="24h">24H</button>
+          <button class="tf-btn active" data-tf="7d">7D</button>
+          <button class="tf-btn" data-tf="30d">30D</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div class="chart-container" id="chartContainer">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exchanges and Whale Alerts -->
+    <div class="grid-2">
+      <!-- Exchange Listings -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Exchange Listings <span class="card-badge" id="exchangeCount">0</span></span>
+        </div>
+        <div class="card-body" id="exchangeList">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- Whale Alerts -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Whale Alerts</span>
+          <div class="live-indicator">
+            <span class="live-dot"></span>
+            Live
+          </div>
+        </div>
+        <div class="card-body" id="whaleAlerts">
+          <div class="empty-state">
+            <div class="empty-state-icon">&#x1F40B;</div>
+            <div>No whale alerts yet</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Transfers and Info -->
+    <div class="grid-2">
+      <!-- Live Transfers -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Transfers</span>
+          <div class="live-indicator">
+            <span class="live-dot"></span>
+            Live
+          </div>
+        </div>
+        <div class="card-body" id="transferFeed">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- Contract Info & Social -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Contract & Social</span>
+        </div>
+        <div class="card-body">
+          <div class="contract-info" style="margin-bottom: 20px;">
+            <div class="contract-row">
+              <span class="contract-label">ETH Contract</span>
+              <span class="contract-value">
+                <span id="ethContract">0x7578...7e88</span>
+                <button class="copy-btn" onclick="copyContract()">
+                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                  </svg>
+                </button>
+              </span>
+            </div>
+            <div class="contract-row">
+              <span class="contract-label">Chain</span>
+              <span class="contract-value">Ethereum (ERC-20)</span>
+            </div>
+            <div class="contract-row">
+              <span class="contract-label">Max Supply</span>
+              <span class="contract-value">100,000,000 OMNIA</span>
+            </div>
+          </div>
+
+          <div class="social-links">
+            <a href="https://omniatech.io/" target="_blank" rel="noopener" class="social-link">
+              <svg fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4H7.5V1.077zM4.09 4a9.267 9.267 0 0 1 .64-1.539 6.7 6.7 0 0 1 .597-.933A7.025 7.025 0 0 0 2.255 4H4.09zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a6.958 6.958 0 0 0-.656 2.5h2.49zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5H4.847zM8.5 5v2.5h2.99a12.495 12.495 0 0 0-.337-2.5H8.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5H4.51zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5H8.5zM5.145 12c.138.386.295.744.468 1.068.552 1.035 1.218 1.65 1.887 1.855V12H5.145zm.182 2.472a6.696 6.696 0 0 1-.597-.933A9.268 9.268 0 0 1 4.09 12H2.255a7.024 7.024 0 0 0 3.072 2.472zM3.82 11a13.652 13.652 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5H3.82zm6.853 3.472A7.024 7.024 0 0 0 13.745 12H11.91a9.27 9.27 0 0 1-.64 1.539 6.688 6.688 0 0 1-.597.933zM8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855.173-.324.33-.682.468-1.068H8.5zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.65 13.65 0 0 1-.312 2.5zm2.802-3.5a6.959 6.959 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5h2.49zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7.024 7.024 0 0 0-3.072-2.472c.218.284.418.598.597.933zM10.855 4a7.966 7.966 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4h2.355z"/></svg>
+              Website
+            </a>
+            <a href="https://twitter.com/omnia_protocol" target="_blank" rel="noopener" class="social-link">
+              <svg fill="currentColor" viewBox="0 0 16 16"><path d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.006-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.087.793A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115 3.23 3.23 0 0 1-.614-.057 3.283 3.283 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"/></svg>
+              @omnia_protocol
+            </a>
+            <a href="https://linktr.ee/omniaprotocol" target="_blank" rel="noopener" class="social-link">
+              <svg fill="currentColor" viewBox="0 0 16 16"><path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9c-.086 0-.17.01-.25.031A2 2 0 0 1 7 10.5H4a2 2 0 1 1 0-4h1.535c.218-.376.495-.714.82-1z"/><path d="M9 5.5a3 3 0 0 0-2.83 4h1.098A2 2 0 0 1 9 6.5h3a2 2 0 1 1 0 4h-1.535a4.02 4.02 0 0 1-.82 1H12a3 3 0 1 0 0-6H9z"/></svg>
+              Linktree
+            </a>
+            <a href="https://etherscan.io/token/0x75780415fca0157e4814a1a2588f1ee9ff0f7e88" target="_blank" rel="noopener" class="social-link">
+              <svg fill="currentColor" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/></svg>
+              Etherscan
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // State
+    var currentTimeframe = '7d';
+    var chartData = [];
+    var socket = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      initSocket();
+      fetchInitialData();
+      setupTimeframeButtons();
+    });
+
+    // Socket.IO Connection
+    function initSocket() {
+      socket = io({
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+      });
+
+      socket.on('connect', function() {
+        document.getElementById('statusDot').classList.add('connected');
+        document.getElementById('connectionStatus').textContent = 'Connected';
+      });
+
+      socket.on('disconnect', function() {
+        document.getElementById('statusDot').classList.remove('connected');
+        document.getElementById('connectionStatus').textContent = 'Disconnected';
+      });
+
+      // OMNIA specific events
+      socket.on('omnia:update', function(data) {
+        updatePriceDisplay(data);
+        updateExchanges(data.exchanges);
+        updateTransfers(data.recentTransfers);
+        updateLastUpdate(data.lastUpdated);
+      });
+
+      socket.on('omnia:whale', function(alert) {
+        addWhaleAlert(alert);
+      });
+
+      socket.on('omnia:transfer', function(transfer) {
+        prependTransfer(transfer);
+      });
+    }
+
+    // Fetch initial data
+    async function fetchInitialData() {
+      try {
+        // Fetch price data
+        var priceRes = await fetch('/api/omnia/data');
+        if (priceRes.ok) {
+          var data = await priceRes.json();
+          updatePriceDisplay(data);
+          updateExchanges(data.exchanges);
+          updateTransfers(data.recentTransfers);
+          renderWhaleAlerts(data.whaleAlerts);
+          updateLastUpdate(data.lastUpdated);
+        }
+
+        // Fetch chart data
+        await fetchChartData(currentTimeframe);
+      } catch (error) {
+        // Log silently in production
+      }
+    }
+
+    // Update price display
+    function updatePriceDisplay(data) {
+      var priceEl = document.getElementById('currentPrice');
+      var changeEl = document.getElementById('priceChange');
+      var marketCapEl = document.getElementById('marketCap');
+      var volumeEl = document.getElementById('volume24h');
+      var supplyEl = document.getElementById('circulatingSupply');
+      var athEl = document.getElementById('athDisplay');
+
+      // Format price
+      priceEl.textContent = formatPrice(data.price);
+
+      // Format change
+      var change = data.priceChangePercent24h || 0;
+      var changeStr = change >= 0 ? '+' + change.toFixed(2) + '%' : change.toFixed(2) + '%';
+      changeEl.textContent = changeStr;
+      changeEl.className = 'price-change ' + (change >= 0 ? 'positive' : 'negative');
+
+      // Other stats
+      marketCapEl.textContent = formatCurrency(data.marketCap);
+      volumeEl.textContent = formatCurrency(data.volume24h);
+
+      var circulating = data.circulatingSupply || 21370000;
+      supplyEl.textContent = formatNumber(circulating) + ' / 100M';
+
+      var athChange = data.athChangePercent || -99.8;
+      athEl.textContent = '$' + (data.ath ? data.ath.toFixed(2) : '1.77') + ' (' + athChange.toFixed(1) + '%)';
+    }
+
+    // Format helpers
+    function formatPrice(price) {
+      if (!price) return '$0.00';
+      if (price < 0.0001) return '$' + price.toFixed(8);
+      if (price < 0.01) return '$' + price.toFixed(6);
+      if (price < 1) return '$' + price.toFixed(4);
+      return '$' + price.toFixed(2);
+    }
+
+    function formatCurrency(value) {
+      if (!value) return '$0';
+      if (value >= 1000000) return '$' + (value / 1000000).toFixed(2) + 'M';
+      if (value >= 1000) return '$' + (value / 1000).toFixed(1) + 'K';
+      return '$' + value.toFixed(0);
+    }
+
+    function formatNumber(value) {
+      if (!value) return '0';
+      if (value >= 1000000) return (value / 1000000).toFixed(2) + 'M';
+      if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+      return value.toFixed(0);
+    }
+
+    // Update exchanges using DOM manipulation instead of innerHTML
+    function updateExchanges(exchanges) {
+      var container = document.getElementById('exchangeList');
+      var countEl = document.getElementById('exchangeCount');
+
+      // Clear container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      if (!exchanges || exchanges.length === 0) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.textContent = '\u{1F4CA}';
+        var textDiv = document.createElement('div');
+        textDiv.textContent = 'No exchange data available';
+        emptyDiv.appendChild(iconDiv);
+        emptyDiv.appendChild(textDiv);
+        container.appendChild(emptyDiv);
+        countEl.textContent = '0';
+        return;
+      }
+
+      countEl.textContent = exchanges.length.toString();
+
+      var table = document.createElement('table');
+      table.className = 'exchange-table';
+
+      var thead = document.createElement('thead');
+      var headerRow = document.createElement('tr');
+      ['Exchange', 'Pair', 'Price', 'Volume 24h', 'Trust'].forEach(function(text) {
+        var th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      var tbody = document.createElement('tbody');
+      exchanges.slice(0, 10).forEach(function(ex) {
+        var row = document.createElement('tr');
+
+        var nameCell = document.createElement('td');
+        nameCell.className = 'exchange-name';
+        nameCell.textContent = ex.name;
+        row.appendChild(nameCell);
+
+        var pairCell = document.createElement('td');
+        pairCell.textContent = ex.pair;
+        row.appendChild(pairCell);
+
+        var priceCell = document.createElement('td');
+        priceCell.textContent = formatPrice(ex.price);
+        row.appendChild(priceCell);
+
+        var volumeCell = document.createElement('td');
+        volumeCell.textContent = formatCurrency(ex.volume24h);
+        row.appendChild(volumeCell);
+
+        var trustCell = document.createElement('td');
+        var trustBadge = document.createElement('span');
+        var trustClass = ex.trustScore === 'green' ? 'green' : ex.trustScore === 'yellow' ? 'yellow' : 'red';
+        trustBadge.className = 'trust-badge ' + trustClass;
+        trustBadge.textContent = ex.trustScore;
+        trustCell.appendChild(trustBadge);
+        row.appendChild(trustCell);
+
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+
+    // Update transfers using DOM manipulation
+    function updateTransfers(transfers) {
+      var container = document.getElementById('transferFeed');
+
+      // Clear container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      if (!transfers || transfers.length === 0) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.textContent = '\u{1F4E8}';
+        var textDiv = document.createElement('div');
+        textDiv.textContent = 'No recent transfers';
+        emptyDiv.appendChild(iconDiv);
+        emptyDiv.appendChild(textDiv);
+        container.appendChild(emptyDiv);
+        return;
+      }
+
+      transfers.slice(0, 15).forEach(function(t) {
+        container.appendChild(createTransferElement(t));
+      });
+    }
+
+    function createTransferElement(transfer) {
+      var display = transfer.display || formatTransfer(transfer);
+      var iconClass = transfer.isWhale ? 'whale' :
+                     transfer.direction === 'in' ? 'deposit' :
+                     transfer.direction === 'out' ? 'withdrawal' : 'transfer';
+      var icon = transfer.isWhale ? '\u{1F40B}' :
+                transfer.direction === 'in' ? '\u2B07\uFE0F' :
+                transfer.direction === 'out' ? '\u2B06\uFE0F' : '\u2194\uFE0F';
+
+      var item = document.createElement('div');
+      item.className = 'transfer-item';
+
+      var iconDiv = document.createElement('div');
+      iconDiv.className = 'transfer-icon ' + iconClass;
+      iconDiv.textContent = icon;
+      item.appendChild(iconDiv);
+
+      var detailsDiv = document.createElement('div');
+      detailsDiv.className = 'transfer-details';
+
+      var addrDiv = document.createElement('div');
+      addrDiv.className = 'transfer-addresses';
+      addrDiv.textContent = display.from + ' \u2192 ' + display.to;
+      detailsDiv.appendChild(addrDiv);
+
+      var amountDiv = document.createElement('div');
+      amountDiv.className = 'transfer-amount';
+      var amountSpan = document.createElement('span');
+      amountSpan.textContent = formatTokenAmount(transfer.value);
+      amountDiv.appendChild(amountSpan);
+      amountDiv.appendChild(document.createTextNode(' OMNIA'));
+      detailsDiv.appendChild(amountDiv);
+
+      item.appendChild(detailsDiv);
+
+      var timeDiv = document.createElement('div');
+      timeDiv.className = 'transfer-time';
+      timeDiv.textContent = display.timeAgo || formatTimeAgo(transfer.timestamp);
+      item.appendChild(timeDiv);
+
+      return item;
+    }
+
+    function formatTransfer(transfer) {
+      return {
+        from: shortenAddress(transfer.from),
+        to: shortenAddress(transfer.to),
+        timeAgo: formatTimeAgo(transfer.timestamp)
+      };
+    }
+
+    function shortenAddress(addr) {
+      if (!addr) return '???';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function formatTokenAmount(value) {
+      if (value >= 1000000) return (value / 1000000).toFixed(2) + 'M';
+      if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+      return value.toFixed(0);
+    }
+
+    function formatTimeAgo(timestamp) {
+      if (!timestamp) return 'unknown';
+      var diff = Date.now() - timestamp;
+      var minutes = Math.floor(diff / 60000);
+      var hours = Math.floor(diff / 3600000);
+      var days = Math.floor(diff / 86400000);
+
+      if (days > 0) return days + 'd ago';
+      if (hours > 0) return hours + 'h ago';
+      if (minutes > 0) return minutes + 'm ago';
+      return 'just now';
+    }
+
+    function prependTransfer(transfer) {
+      var container = document.getElementById('transferFeed');
+      var emptyState = container.querySelector('.empty-state');
+      if (emptyState) {
+        container.removeChild(emptyState);
+      }
+
+      var element = createTransferElement(transfer);
+      container.insertBefore(element, container.firstChild);
+
+      // Keep only 15 items
+      while (container.children.length > 15) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    // Whale Alerts using DOM manipulation
+    function renderWhaleAlerts(alerts) {
+      var container = document.getElementById('whaleAlerts');
+
+      // Clear container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      if (!alerts || alerts.length === 0) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.textContent = '\u{1F40B}';
+        var textDiv = document.createElement('div');
+        textDiv.textContent = 'No whale alerts yet';
+        emptyDiv.appendChild(iconDiv);
+        emptyDiv.appendChild(textDiv);
+        container.appendChild(emptyDiv);
+        return;
+      }
+
+      alerts.slice(0, 10).forEach(function(alert) {
+        container.appendChild(createWhaleAlertElement(alert));
+      });
+    }
+
+    function createWhaleAlertElement(alert) {
+      var severity = alert.severity || 'info';
+      var icon = severity === 'critical' ? '\u{1F6A8}' : severity === 'warning' ? '\u26A0\uFE0F' : '\u{1F40B}';
+
+      var div = document.createElement('div');
+      div.className = 'whale-alert ' + severity;
+
+      var iconSpan = document.createElement('span');
+      iconSpan.className = 'whale-icon';
+      iconSpan.textContent = icon;
+      div.appendChild(iconSpan);
+
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'whale-content';
+
+      var msgDiv = document.createElement('div');
+      msgDiv.className = 'whale-message';
+      msgDiv.textContent = alert.message;
+      contentDiv.appendChild(msgDiv);
+
+      var timeDiv = document.createElement('div');
+      timeDiv.className = 'whale-time';
+      timeDiv.textContent = formatTimeAgo(alert.timestamp);
+      contentDiv.appendChild(timeDiv);
+
+      div.appendChild(contentDiv);
+      return div;
+    }
+
+    function addWhaleAlert(alert) {
+      var container = document.getElementById('whaleAlerts');
+      var emptyState = container.querySelector('.empty-state');
+      if (emptyState) {
+        container.removeChild(emptyState);
+      }
+
+      var element = createWhaleAlertElement(alert);
+      container.insertBefore(element, container.firstChild);
+
+      // Keep only 10 items
+      while (container.children.length > 10) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    // Chart
+    function setupTimeframeButtons() {
+      document.querySelectorAll('.tf-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.tf-btn').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          currentTimeframe = btn.dataset.tf;
+          fetchChartData(currentTimeframe);
+        });
+      });
+    }
+
+    async function fetchChartData(tf) {
+      var container = document.getElementById('chartContainer');
+      container.textContent = '';
+      var loadingDiv = document.createElement('div');
+      loadingDiv.className = 'loading';
+      var spinner = document.createElement('div');
+      spinner.className = 'spinner';
+      loadingDiv.appendChild(spinner);
+      container.appendChild(loadingDiv);
+
+      try {
+        var res = await fetch('/api/omnia/chart/' + tf);
+        if (res.ok) {
+          var data = await res.json();
+          chartData = data.data || [];
+          renderChart(chartData);
+        }
+      } catch (error) {
+        container.textContent = '';
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.textContent = '\u{1F4C8}';
+        var textDiv = document.createElement('div');
+        textDiv.textContent = 'Failed to load chart';
+        emptyDiv.appendChild(iconDiv);
+        emptyDiv.appendChild(textDiv);
+        container.appendChild(emptyDiv);
+      }
+    }
+
+    function renderChart(data) {
+      var container = document.getElementById('chartContainer');
+      container.textContent = '';
+
+      if (!data || data.length === 0) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.textContent = '\u{1F4C8}';
+        var textDiv = document.createElement('div');
+        textDiv.textContent = 'No chart data available';
+        emptyDiv.appendChild(iconDiv);
+        emptyDiv.appendChild(textDiv);
+        container.appendChild(emptyDiv);
+        return;
+      }
+
+      var width = container.clientWidth;
+      var height = 280;
+      var padding = { top: 20, right: 20, bottom: 30, left: 60 };
+
+      var prices = data.map(function(d) { return d.price; });
+      var minPrice = Math.min.apply(null, prices);
+      var maxPrice = Math.max.apply(null, prices);
+      var priceRange = maxPrice - minPrice || 1;
+
+      function xScale(i) {
+        return padding.left + (i / (data.length - 1)) * (width - padding.left - padding.right);
+      }
+
+      function yScale(price) {
+        return height - padding.bottom - ((price - minPrice) / priceRange) * (height - padding.top - padding.bottom);
+      }
+
+      // Create SVG using DOM methods
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'chart-svg');
+      svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+
+      // Defs for gradient
+      var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      var gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+      gradient.setAttribute('id', 'chartGradient');
+      gradient.setAttribute('x1', '0%');
+      gradient.setAttribute('y1', '0%');
+      gradient.setAttribute('x2', '0%');
+      gradient.setAttribute('y2', '100%');
+
+      var stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop1.setAttribute('offset', '0%');
+      stop1.setAttribute('stop-color', '#8b5cf6');
+      stop1.setAttribute('stop-opacity', '0.3');
+
+      var stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop2.setAttribute('offset', '100%');
+      stop2.setAttribute('stop-color', '#8b5cf6');
+      stop2.setAttribute('stop-opacity', '0');
+
+      gradient.appendChild(stop1);
+      gradient.appendChild(stop2);
+      defs.appendChild(gradient);
+      svg.appendChild(defs);
+
+      // Grid lines
+      var gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      gridGroup.setAttribute('class', 'chart-grid');
+      [0, 0.25, 0.5, 0.75, 1].forEach(function(pct) {
+        var y = padding.top + pct * (height - padding.top - padding.bottom);
+        var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', padding.left);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', width - padding.right);
+        line.setAttribute('y2', y);
+        gridGroup.appendChild(line);
+      });
+      svg.appendChild(gridGroup);
+
+      // Create path data
+      var linePath = data.map(function(d, i) {
+        var x = xScale(i);
+        var y = yScale(d.price);
+        return i === 0 ? 'M ' + x + ' ' + y : 'L ' + x + ' ' + y;
+      }).join(' ');
+
+      // Area path
+      var areaPathData = linePath + ' L ' + xScale(data.length - 1) + ' ' + (height - padding.bottom) + ' L ' + xScale(0) + ' ' + (height - padding.bottom) + ' Z';
+
+      var areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      areaPath.setAttribute('class', 'chart-area');
+      areaPath.setAttribute('d', areaPathData);
+      svg.appendChild(areaPath);
+
+      // Line path
+      var lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      lineEl.setAttribute('class', 'chart-line');
+      lineEl.setAttribute('d', linePath);
+      svg.appendChild(lineEl);
+
+      // Y-axis labels
+      var axisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      axisGroup.setAttribute('class', 'chart-axis');
+      [0, 0.5, 1].forEach(function(pct) {
+        var y = padding.top + pct * (height - padding.top - padding.bottom);
+        var price = maxPrice - pct * priceRange;
+        var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', padding.left - 8);
+        text.setAttribute('y', y + 4);
+        text.setAttribute('text-anchor', 'end');
+        text.textContent = formatPrice(price);
+        axisGroup.appendChild(text);
+      });
+      svg.appendChild(axisGroup);
+
+      container.appendChild(svg);
+    }
+
+    // Update last update time
+    function updateLastUpdate(timestamp) {
+      var el = document.getElementById('lastUpdate');
+      if (timestamp) {
+        el.textContent = 'Updated: ' + formatTimeAgo(timestamp);
+      }
+    }
+
+    // Copy contract address
+    function copyContract() {
+      var address = '0x75780415fca0157e4814a1a2588f1ee9ff0f7e88';
+      navigator.clipboard.writeText(address).then(function() {
+        alert('Contract address copied!');
+      });
+    }
+
+    // Handle window resize for chart
+    window.addEventListener('resize', function() {
+      if (chartData.length > 0) {
+        renderChart(chartData);
+      }
+    });
+  </script>
+</body>
+</html>
