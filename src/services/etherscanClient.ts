@@ -52,8 +52,11 @@ const KNOWN_ADDRESSES: Record<string, string> = {
 };
 
 export class EtherscanClient {
-  private baseUrl = 'https://api.etherscan.io/api';
+  // V2 API endpoints with chainid parameter
+  private baseUrl = 'https://api.etherscan.io/v2/api';
   private bscBaseUrl = 'https://api.bscscan.com/api';
+  private ethChainId = 1; // Ethereum Mainnet
+  private bscChainId = 56; // BSC Mainnet
   private contractAddress = '0x75780415fca0157e4814a1a2588f1ee9ff0f7e88';
   private apiKey: string;
   private bscApiKey: string;
@@ -149,7 +152,9 @@ export class EtherscanClient {
     if (cached) return cached;
 
     try {
-      const url = `${this.baseUrl}?module=account&action=tokentx&contractaddress=${this.contractAddress}&page=${page}&offset=${offset}&startblock=${startBlock}&sort=desc&apikey=${this.apiKey}`;
+      // V2 API requires chainid parameter
+      const apiKeyParam = this.apiKey ? `&apikey=${this.apiKey}` : '';
+      const url = `${this.baseUrl}?chainid=${this.ethChainId}&module=account&action=tokentx&contractaddress=${this.contractAddress}&page=${page}&offset=${offset}&startblock=${startBlock}&sort=desc${apiKeyParam}`;
       const response = await this.rateLimitedFetch(url);
 
       if (!response.ok) {
@@ -162,6 +167,11 @@ export class EtherscanClient {
       if (data.status !== '1' || !data.result) {
         // API returns '0' status with 'No transactions found' for empty results
         if (data.message === 'No transactions found') {
+          return [];
+        }
+        // Handle missing API key or deprecated endpoint gracefully
+        if (data.message?.includes('API Key') || data.message?.includes('Invalid')) {
+          console.warn('[Etherscan] API key required for V2 API - transfers will be limited');
           return [];
         }
         console.warn('[Etherscan] API error:', data.message);
@@ -239,7 +249,9 @@ export class EtherscanClient {
     if (cached) return cached;
 
     try {
-      const url = `${this.baseUrl}?module=account&action=tokenbalance&contractaddress=${this.contractAddress}&address=${address}&tag=latest&apikey=${this.apiKey}`;
+      // V2 API requires chainid parameter
+      const apiKeyParam = this.apiKey ? `&apikey=${this.apiKey}` : '';
+      const url = `${this.baseUrl}?chainid=${this.ethChainId}&module=account&action=tokenbalance&contractaddress=${this.contractAddress}&address=${address}&tag=latest${apiKeyParam}`;
       const response = await this.rateLimitedFetch(url);
 
       if (!response.ok) {

@@ -72,7 +72,7 @@ export interface CoinGeckoTicker {
 export class CoinGeckoClient {
   private baseUrl = 'https://api.coingecko.com/api/v3';
   private proBaseUrl = 'https://pro-api.coingecko.com/api/v3';
-  private coinId = 'omnia-protocol';
+  private coinId = 'omnia';
   private apiKey: string;
   private timeout: number;
   private lastRequestTime: number = 0;
