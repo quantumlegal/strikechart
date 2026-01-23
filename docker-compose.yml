@@ -45,6 +45,7 @@ services:
       - PORT=3001
       - ML_SERVICE_URL=http://ml-service:8001
       - ML_ENABLED=true
+      - ETHERSCAN_API_KEY=GD738IG8QKBN287MED47BX7VC1P8W2WV3U
     depends_on:
       ml-service:
         condition: service_healthy
