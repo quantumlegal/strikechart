@@ -239,11 +239,12 @@ export class WebServer {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Socket.IO
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://platform.twitter.com", "https://cdn.syndication.twimg.com"], // Required for Socket.IO + Twitter widget
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://platform.twitter.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com"],
+          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com", "https://syndication.twitter.com", "https://cdn.syndication.twimg.com"],
+          frameSrc: ["'self'", "https://platform.twitter.com", "https://syndication.twitter.com"],
         },
       },
       crossOriginEmbedderPolicy: false, // Allow embedding
