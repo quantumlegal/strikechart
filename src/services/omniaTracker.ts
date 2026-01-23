@@ -391,7 +391,7 @@ export class OmniaTracker extends EventEmitter {
       eth: this.etherscanClient.getContractInfo(),
       social: {
         website: 'https://omniatech.io/',
-        twitter: 'https://twitter.com/omnia_protocol',
+        twitter: 'https://x.com/omnia_protocol',
         linktree: 'https://linktr.ee/omniaprotocol',
       },
     };
