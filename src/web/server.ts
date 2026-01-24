@@ -239,15 +239,16 @@ export class WebServer {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://platform.twitter.com", "https://cdn.syndication.twimg.com", "https://*.twimg.com"], // Required for Socket.IO + Twitter widget
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://platform.twitter.com", "https://*.twimg.com"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://platform.twitter.com", "https://platform.x.com", "https://cdn.syndication.twimg.com", "https://*.twimg.com", "https://*.x.com"], // Required for Socket.IO + Twitter/X widget
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://platform.twitter.com", "https://platform.x.com", "https://*.twimg.com", "https://*.x.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com", "https://syndication.twitter.com", "https://cdn.syndication.twimg.com", "https://*.twitter.com", "https://*.twimg.com"],
-          frameSrc: ["'self'", "https://platform.twitter.com", "https://syndication.twitter.com", "https://*.twitter.com"],
+          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com", "https://syndication.twitter.com", "https://syndication.x.com", "https://cdn.syndication.twimg.com", "https://*.twitter.com", "https://*.twimg.com", "https://*.x.com"],
+          frameSrc: ["'self'", "https://platform.twitter.com", "https://syndication.twitter.com", "https://*.twitter.com", "https://platform.x.com", "https://syndication.x.com", "https://*.x.com"],
         },
       },
       crossOriginEmbedderPolicy: false, // Allow embedding
+      crossOriginOpenerPolicy: false, // Allow Twitter/X iframe communication
     }));
 
     // Security: CORS for Express
