@@ -239,11 +239,11 @@ export class WebServer {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://platform.twitter.com", "https://platform.x.com", "https://cdn.syndication.twimg.com", "https://*.twimg.com", "https://*.x.com"], // Required for Socket.IO + Twitter/X widget
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://platform.twitter.com", "https://platform.x.com", "https://cdn.syndication.twimg.com", "https://*.twimg.com", "https://*.x.com", "https://static.cloudflareinsights.com"], // Required for Socket.IO + Twitter/X widget + Cloudflare
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://platform.twitter.com", "https://platform.x.com", "https://*.twimg.com", "https://*.x.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com", "https://syndication.twitter.com", "https://syndication.x.com", "https://cdn.syndication.twimg.com", "https://*.twitter.com", "https://*.twimg.com", "https://*.x.com"],
+          connectSrc: ["'self'", "wss:", "ws:", "https://api.binance.com", "https://fapi.binance.com", "https://syndication.twitter.com", "https://syndication.x.com", "https://cdn.syndication.twimg.com", "https://*.twitter.com", "https://*.twimg.com", "https://*.x.com", "https://cloudflareinsights.com", "https://static.cloudflareinsights.com"],
           frameSrc: ["'self'", "https://platform.twitter.com", "https://syndication.twitter.com", "https://*.twitter.com", "https://platform.x.com", "https://syndication.x.com", "https://*.x.com"],
         },
       },
