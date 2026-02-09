@@ -34,7 +34,8 @@ const __dirname = path.dirname(__filename);
 
 // Trust proxy setting for rate limiter (required behind Cloudflare/nginx)
 // Must be set BEFORE creating rate limiters
-const TRUST_PROXY = true;
+// 2 = two proxies in chain: Cloudflare -> nginx -> Express
+const TRUST_PROXY = 2;
 
 // Security: Rate limiting configuration
 const apiLimiter = rateLimit({
