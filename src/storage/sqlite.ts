@@ -111,8 +111,26 @@ export class StorageManager {
 
     // Load existing database or create new one
     if (fs.existsSync(this.dbPath)) {
-      const buffer = fs.readFileSync(this.dbPath);
-      this.db = new SQL.Database(buffer);
+      try {
+        const buffer = fs.readFileSync(this.dbPath);
+        const db = new SQL.Database(buffer);
+        // Verify integrity before proceeding
+        db.exec('SELECT 1');
+        this.db = db;
+      } catch (err) {
+        console.error(`Database corrupted: ${(err as Error).message}`);
+        // Back up corrupted file and start fresh
+        const backupPath = `${this.dbPath}.corrupted.${Date.now()}`;
+        try {
+          fs.renameSync(this.dbPath, backupPath);
+          console.log(`Corrupted database backed up to: ${backupPath}`);
+        } catch {
+          console.error('Could not back up corrupted database, removing it');
+          fs.unlinkSync(this.dbPath);
+        }
+        this.db = new SQL.Database();
+        console.log('Created fresh database');
+      }
     } else {
       this.db = new SQL.Database();
     }
