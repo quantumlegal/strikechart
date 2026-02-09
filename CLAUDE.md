@@ -122,7 +122,11 @@ docker-compose ps             # Verify healthy
 ```bash
 # Check containers are healthy
 curl https://signalsense.trade/api/status
-# Expected: {"status":"connected","symbolCount":584,"uptime":...}
+# Expected: {"status":"connected","symbolCount":589,"uptime":...}
+
+# Check deep health report
+curl https://signalsense.trade/api/health
+# Expected: {"status":"ok","memory":{...},"websocket":{...},"lastHealthReport":{...}}
 
 # Check ML data preserved
 curl https://signalsense.trade/api/ml/feature-counts
@@ -162,7 +166,7 @@ pm2 start dist/web-index.js --name strikechart -i max
 ```
 Binance WebSocket (!ticker@arr)
     ↓
-BinanceWebSocket (src/binance/websocket.ts)
+BinanceWebSocket (src/binance/websocket.ts) [exponential backoff reconnect]
     ↓
 DataStore (src/core/dataStore.ts) - maintains rolling price/volume history
     ↓
@@ -175,6 +179,8 @@ SmartSignalEngine + ML Client (predictions)
 Web Server (Express + Socket.IO) → Dashboard
     ↓
 SQLite persistence (sql.js) + ML Service (Python)
+    ↓
+HealthManager (src/services/healthManager.ts) - periodic maintenance cycles
 ```
 
 ### ML Architecture
@@ -205,7 +211,7 @@ SQLite persistence (sql.js) + ML Service (Python)
 - `src/binance/` - WebSocket connection and Binance types
 - `src/core/` - DataStore, OpportunityRanker, FilterManager
 - `src/detectors/` - 18 detector modules (volatility, volume, velocity, smartSignal, etc.)
-- `src/services/` - ML client, feature extractor
+- `src/services/` - ML client, feature extractor, health manager
 - `src/storage/` - SQLite persistence
 - `src/ui/` - Terminal dashboard (blessed)
 - `src/web/` - Express + Socket.IO server
@@ -295,6 +301,7 @@ const ALLOWED_ORIGINS = [
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/status` | GET | Connection status, symbol count, uptime |
+| `/api/health` | GET | Deep health report (memory, WS, DB, intervals, ML) |
 | `/api/opportunities` | GET | Top 20 ranked opportunities |
 | `/api/debug` | GET | All detector outputs |
 | `/api/price-history/:symbol` | GET | Last 30 price points for sparklines |
@@ -352,6 +359,22 @@ ml: {
 }
 ```
 
+### Health System Configuration
+
+```typescript
+health: {
+  enabled: true,                    // HEALTH_ENABLED env override
+  intervalMs: 300000 / 600000,      // 5min prod / 10min dev
+  pruneOpportunityDays: 7,          // Delete opportunities older than 7 days
+  pruneAlertDays: 3,                // Delete alerts older than 3 days
+  prunePendingHours: 24,            // Delete stale PENDING signals after 24h
+  memoryWarnPercent: 80,            // Log warning at 80% of maxHeapMB
+  maxHeapMB: 512,                   // Reference ceiling for memory %
+  wsWatchdogTimeoutMs: 60000,       // Force reconnect if no data for 60s
+  staleSymbolHours: 2,              // Remove symbols with no data for 2h
+}
+```
+
 ---
 
 ## Detector Pattern
@@ -405,6 +428,64 @@ class XxxDetector {
 
 ---
 
+## Health & Efficiency System (February 2026)
+
+The platform has a self-healing `HealthManager` (`src/services/healthManager.ts`) that runs periodic maintenance cycles to prevent crashes and unbounded resource growth.
+
+### Architecture
+
+```
+HealthManager (runs every 5min prod / 10min dev, first run after 30s delay)
+    ├── Memory Check - logs process.memoryUsage(), warns at 80% of 512MB
+    ├── WebSocket Watchdog - if connected but no data for 60s, forces reconnect
+    ├── DB Pruning - deletes old opportunities (7d), alerts (3d), pending signals (24h) + VACUUM
+    ├── Stale Symbol Cleanup - removes symbols with no data for 2+ hours (preserves knownSymbols)
+    ├── Map Cleanup - removes stale connectionsPerIP and socketMessageCounts entries
+    ├── ML Stats - logs prediction cache size and service availability
+    ├── Interval Health - verifies updateInterval/logInterval/detectorInterval are active
+    └── Builds HealthReport - stored as lastReport, served via GET /api/health
+```
+
+### Key Files
+
+| File | Changes |
+|------|---------|
+| `src/services/healthManager.ts` | HealthManager class (NEW) |
+| `src/config.ts` | `config.health.*` settings block |
+| `src/binance/types.ts` | `HealthReport` interface |
+| `src/binance/websocket.ts` | Exponential backoff (1s-60s), `forceReconnect()`, `getLastDataTime()` |
+| `src/core/dataStore.ts` | `removeStaleSymbols()`, `getSymbolLastUpdate()` |
+| `src/storage/sqlite.ts` | `pruneOldRecords()`, `vacuum()`, `getTableCounts()`, `getDatabaseSizeBytes()` |
+| `src/web/server.ts` | `GET /api/health` endpoint, `getConnectionsPerIP()`, `getSocketMessageCounts()`, `getMLClient()`, `setHealthManager()` |
+| `src/web-index.ts` | `intervalRefs` object, `uncaughtException`/`unhandledRejection` handlers, HealthManager wiring |
+
+### WebSocket Reconnection
+
+Replaced fixed 5s reconnect with exponential backoff:
+- Base: 1s, max: 60s, with random jitter (0-1s)
+- Formula: `min(1s * 2^attempts, 60s) + random(0-1s)`
+- Reset to 0 on successful connection
+- Watchdog: forces reconnect if connected but no data received for 60s
+
+### Crash Handlers
+
+- `uncaughtException` - logs error, triggers graceful shutdown
+- `unhandledRejection` - logs warning, continues running (no crash)
+
+### Health Endpoint Response
+
+```bash
+curl https://signalsense.trade/api/health
+```
+
+Returns: real-time memory, uptime, WebSocket status, visitor count, ML status, HealthManager metrics, and the full last health cycle report (memory, WS watchdog, DB tables/pruning, stale symbols, map cleanup, ML, intervals).
+
+### Trust Proxy
+
+Set to `2` (Cloudflare + nginx) instead of `true` to avoid `ERR_ERL_PERMISSIVE_TRUST_PROXY` from express-rate-limit.
+
+---
+
 ## Recent Fixes & Changes (January 2026)
 
 ### Sparkline Intermittent Display Fix
@@ -428,12 +509,13 @@ if (cached && cached.data) {
 ```
 
 ### Rate Limiter Proxy Trust Fix
-**Problem**: `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` errors in logs, rate limiter not identifying clients correctly behind Cloudflare
-**Root Cause**: Express `trust proxy` setting was not enabled
+**Problem**: `ERR_ERL_PERMISSIVE_TRUST_PROXY` / `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` errors in logs
+**Root Cause**: Express `trust proxy` set to `true` (trusts any proxy) - too permissive for express-rate-limit v7+
 **Solution** (src/web/server.ts):
 ```typescript
-// Added before rate limiters
-this.app.set('trust proxy', true);
+// Set to exact proxy count: Cloudflare (1) + nginx (2)
+const TRUST_PROXY = 2;
+this.app.set('trust proxy', TRUST_PROXY);
 ```
 
 ### Signal Performance Tracker Collapse Fix
@@ -476,15 +558,26 @@ docker logs signalsensehunter-ml
 
 ### High Memory Usage
 
+- Check `/api/health` for current memory usage and warning status
+- HealthManager warns at 80% of 512MB heap
 - Reduce `maxPriceHistory` in config
 - Decrease `maxDisplayed` values
 - Increase Node.js heap: `NODE_OPTIONS="--max-old-space-size=512"`
 
 ### WebSocket Disconnections
 
+- Check `/api/health` for `websocket.lastDataReceivedAgo` and `reconnectAttempts`
+- WebSocket uses exponential backoff: 1s, 2s, 4s, 8s... up to 60s + jitter
+- WS watchdog auto-reconnects if connected but no data for 60s
 - Check nginx `proxy_read_timeout`
-- Verify Socket.IO reconnection in client
 - Check firewall rules for ports 3001/8001
+
+### Database Growing Too Large
+
+- HealthManager auto-prunes: opportunities (7d), alerts (3d), pending signals (24h)
+- Check `/api/health` for `database.tables` row counts and `database.sizeBytes`
+- VACUUM runs automatically after any pruning cycle
+- Disable pruning with `HEALTH_ENABLED=false` env var if needed
 
 ### Deployment Failed
 
@@ -565,7 +658,11 @@ git push origin master
 - ML predictions cached for 5 seconds
 - Named Docker volumes persist across deployments
 - Always use `VPS_createNewProjectV1` for code updates (preserves volumes)
-- Express `trust proxy` enabled for correct client IP detection behind Cloudflare
+- Express `trust proxy` set to `2` (Cloudflare + nginx) for correct client IP detection
+- HealthManager runs periodic maintenance cycles (memory, DB pruning, WS watchdog, stale cleanup)
+- WebSocket uses exponential backoff reconnection (1s base, 60s max, jitter)
+- Crash handlers: `uncaughtException` (graceful shutdown), `unhandledRejection` (log only)
+- `intervalRefs` object pattern: single object holds all interval references for cross-module visibility
 
 ### Frontend Patterns
 - Sparkline price history cached for 30 seconds (reduced API calls)
@@ -588,6 +685,7 @@ git push origin master
 5. Use `VPS_createNewProjectV1` MCP tool - Deploy (preserves volumes)
 6. Wait for containers to show "healthy" status
 7. Verify with `curl https://signalsense.trade/api/status`
+8. Verify health system with `curl https://signalsense.trade/api/health`
 
 ---
 
@@ -597,7 +695,11 @@ git push origin master
 |-------|-------|----------|
 | Sparklines blank | Error responses cached | Fixed: stale cache fallback |
 | Sparklines intermittent | Rate limit errors | Fixed: 30s cache, error handling |
-| Rate limiter errors in logs | Missing trust proxy | Fixed: `app.set('trust proxy', true)` |
+| Rate limiter errors in logs | trust proxy too permissive | Fixed: `app.set('trust proxy', 2)` (Cloudflare + nginx) |
 | Performance tracker won't expand | Missing collapse CSS | Fixed: added rotation CSS |
 | Containers not rebuilding | MCP queue delay | Wait longer, check actions status |
 | ML data lost | Deleted project | Use `createNewProjectV1` (keeps volumes) |
+| DB growing unbounded | No pruning | Fixed: HealthManager prunes opps (7d), alerts (3d), pending (24h) |
+| WS connected but no data | Stale connection | Fixed: WS watchdog forces reconnect after 60s silence |
+| Silent crash, no restart | Unhandled exception | Fixed: `uncaughtException` handler triggers graceful shutdown |
+| Memory leak | Stale symbols/maps | Fixed: HealthManager cleans stale symbols and map entries |
