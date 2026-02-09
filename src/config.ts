@@ -56,6 +56,19 @@ export const config = {
     gcIntervalMs: isProduction ? 300000 : 600000, // 5 min in prod, 10 min in dev
   },
 
+  // Health & Efficiency System
+  health: {
+    enabled: process.env.HEALTH_ENABLED !== 'false',
+    intervalMs: isProduction ? 300000 : 600000, // 5 min prod, 10 min dev
+    pruneOpportunityDays: 7,
+    pruneAlertDays: 3,
+    prunePendingHours: 24,
+    memoryWarnPercent: 80,
+    maxHeapMB: 512,
+    wsWatchdogTimeoutMs: 60000,
+    staleSymbolHours: 2,
+  },
+
   // Detector update intervals (staggered in production)
   detectors: {
     funding: isProduction ? 120000 : 60000,

@@ -700,6 +700,78 @@ export class StorageManager {
     return { predicted: 0, actual: 0, modelCount: 0 };
   }
 
+  // ============== Health & Pruning Methods ==============
+
+  pruneOldRecords(oppDays: number, alertDays: number, pendingHours: number): { opportunities: number; alerts: number; pendingSignals: number } {
+    if (!this.db) return { opportunities: 0, alerts: 0, pendingSignals: 0 };
+
+    const oppCutoff = Date.now() - oppDays * 24 * 60 * 60 * 1000;
+    const alertCutoff = Date.now() - alertDays * 24 * 60 * 60 * 1000;
+    const pendingCutoff = Date.now() - pendingHours * 60 * 60 * 1000;
+
+    const oppBefore = this.getRowCount('opportunities');
+    this.db.run(`DELETE FROM opportunities WHERE created_at < ?`, [oppCutoff]);
+    const oppAfter = this.getRowCount('opportunities');
+
+    const alertBefore = this.getRowCount('alerts');
+    this.db.run(`DELETE FROM alerts WHERE created_at < ?`, [alertCutoff]);
+    const alertAfter = this.getRowCount('alerts');
+
+    const pendingBefore = this.getRowCountWhere('signal_features', `outcome = 'PENDING' AND timestamp < ${pendingCutoff}`);
+    this.db.run(`DELETE FROM signal_features WHERE outcome = 'PENDING' AND timestamp < ?`, [pendingCutoff]);
+    const pendingAfter = this.getRowCountWhere('signal_features', `outcome = 'PENDING'`);
+
+    return {
+      opportunities: oppBefore - oppAfter,
+      alerts: alertBefore - alertAfter,
+      pendingSignals: pendingBefore - (pendingAfter < pendingBefore ? pendingAfter : 0),
+    };
+  }
+
+  vacuum(): void {
+    if (!this.db) return;
+    this.db.run('VACUUM');
+    this.save();
+  }
+
+  getTableCounts(): Record<string, number> {
+    if (!this.db) return {};
+
+    return {
+      opportunities: this.getRowCount('opportunities'),
+      alerts: this.getRowCount('alerts'),
+      sessions: this.getRowCount('sessions'),
+      signal_features: this.getRowCount('signal_features'),
+      ml_model_metrics: this.getRowCount('ml_model_metrics'),
+    };
+  }
+
+  getDatabaseSizeBytes(): number {
+    if (!this.db) return 0;
+    const data = this.db.export();
+    return data.byteLength;
+  }
+
+  private getRowCount(table: string): number {
+    if (!this.db) return 0;
+    // Table names are hardcoded internally, not from user input
+    const result = this.db.exec(`SELECT COUNT(*) FROM "${table}"`);
+    if (result.length > 0 && result[0].values.length > 0) {
+      return result[0].values[0][0] as number;
+    }
+    return 0;
+  }
+
+  private getRowCountWhere(table: string, where: string): number {
+    if (!this.db) return 0;
+    // Table names and where clauses are hardcoded internally, not from user input
+    const result = this.db.exec(`SELECT COUNT(*) FROM "${table}" WHERE ${where}`);
+    if (result.length > 0 && result[0].values.length > 0) {
+      return result[0].values[0][0] as number;
+    }
+    return 0;
+  }
+
   close(): void {
     if (this.saveInterval) {
       clearInterval(this.saveInterval);

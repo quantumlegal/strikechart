@@ -22,11 +22,12 @@ import { EntryTimingCalculator } from '../detectors/entryTiming.js';
 import { WinRateTracker } from '../detectors/winRate.js';
 import { NotificationManager } from '../detectors/notifications.js';
 import { TopPicker } from '../detectors/topPicker.js';
-import { ConnectionStatus } from '../binance/types.js';
+import { ConnectionStatus, HealthReport } from '../binance/types.js';
 import { StorageManager } from '../storage/sqlite.js';
 import { MLServiceClient } from '../services/mlClient.js';
 import { FeatureExtractor } from '../services/featureExtractor.js';
 import { OmniaTracker } from '../services/omniaTracker.js';
+import { HealthManager } from '../services/healthManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -112,6 +113,9 @@ export class WebServer {
 
   // OMNIA Protocol Tracker
   private omniaTracker: OmniaTracker;
+
+  // Health Manager reference
+  private healthManagerRef: HealthManager | null = null;
 
   constructor(
     private dataStore: DataStore,
@@ -278,6 +282,38 @@ export class WebServer {
         status: this.connectionStatus,
         symbolCount: this.symbolCount,
         uptime: process.uptime(),
+      });
+    });
+
+    // Deep health endpoint
+    this.app.get('/api/health', (req, res) => {
+      const mem = process.memoryUsage();
+      const wsStatus = this.connectionStatus;
+      const mlStatus = this.mlClient.getStatus();
+      const healthReport = this.healthManagerRef?.getLastReport() ?? null;
+      const healthMetrics = this.healthManagerRef?.getMetrics() ?? null;
+
+      res.json({
+        status: 'ok',
+        timestamp: Date.now(),
+        uptime: process.uptime(),
+        memory: {
+          heapUsedMB: +(mem.heapUsed / 1024 / 1024).toFixed(2),
+          heapTotalMB: +(mem.heapTotal / 1024 / 1024).toFixed(2),
+          rssMB: +(mem.rss / 1024 / 1024).toFixed(2),
+          externalMB: +(mem.external / 1024 / 1024).toFixed(2),
+        },
+        websocket: {
+          status: wsStatus,
+          symbolCount: this.symbolCount,
+        },
+        visitors: {
+          online: this.visitorCount,
+          total: this.totalVisitors,
+        },
+        ml: mlStatus,
+        healthManager: healthMetrics,
+        lastHealthReport: healthReport,
       });
     });
 
@@ -895,6 +931,22 @@ export class WebServer {
 
   getSmartSignalEngine(): SmartSignalEngine {
     return this.smartSignalEngine;
+  }
+
+  getConnectionsPerIP(): Map<string, number> {
+    return this.connectionsPerIP;
+  }
+
+  getSocketMessageCounts(): Map<string, { count: number; resetTime: number }> {
+    return this.socketMessageCounts;
+  }
+
+  getMLClient(): MLServiceClient {
+    return this.mlClient;
+  }
+
+  setHealthManager(hm: HealthManager): void {
+    this.healthManagerRef = hm;
   }
 
   async start(): Promise<void> {

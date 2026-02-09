@@ -121,3 +121,48 @@ export interface Opportunity {
 
 // WebSocket connection status
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+// Health & Efficiency report
+export interface HealthReport {
+  cycle: number;
+  timestamp: number;
+  memory: {
+    heapUsedMB: number;
+    heapTotalMB: number;
+    rssMB: number;
+    externalMB: number;
+    percentUsed: number;
+    warning: boolean;
+  };
+  websocket: {
+    status: ConnectionStatus;
+    lastDataReceivedAgo: number;
+    reconnectAttempts: number;
+    watchdogTriggered: boolean;
+  };
+  database: {
+    tables: Record<string, number>;
+    sizeBytes: number;
+    pruned: { opportunities: number; alerts: number; pendingSignals: number };
+    vacuumed: boolean;
+  };
+  dataStore: {
+    symbolCount: number;
+    staleSymbolsRemoved: string[];
+  };
+  maps: {
+    connectionsPerIPSize: number;
+    socketMessageCountsSize: number;
+    entriesCleaned: number;
+  };
+  ml: {
+    enabled: boolean;
+    serviceAvailable: boolean;
+    cacheSize: number;
+  };
+  intervals: {
+    updateInterval: boolean;
+    logInterval: boolean;
+    detectorInterval: boolean;
+  };
+}

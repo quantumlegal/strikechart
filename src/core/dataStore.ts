@@ -117,4 +117,29 @@ export class DataStore {
   isInitialized(): boolean {
     return this.initialized;
   }
+
+  getSymbolLastUpdate(symbol: string): number {
+    const data = this.symbols.get(symbol);
+    if (!data || data.priceHistory.length === 0) return 0;
+    return data.priceHistory[data.priceHistory.length - 1].timestamp;
+  }
+
+  removeStaleSymbols(maxAgeMs: number): string[] {
+    const now = Date.now();
+    const removed: string[] = [];
+
+    for (const [symbol, data] of this.symbols) {
+      const lastUpdate = data.priceHistory.length > 0
+        ? data.priceHistory[data.priceHistory.length - 1].timestamp
+        : data.firstSeen;
+
+      if (now - lastUpdate > maxAgeMs) {
+        this.symbols.delete(symbol);
+        // Do NOT remove from knownSymbols so returning symbols won't re-trigger new listing alerts
+        removed.push(symbol);
+      }
+    }
+
+    return removed;
+  }
 }

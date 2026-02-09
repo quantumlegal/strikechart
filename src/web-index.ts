@@ -6,6 +6,7 @@ import { WebServer } from './web/server.js';
 import { SoundAlert } from './alerts/sound.js';
 import { StorageManager } from './storage/sqlite.js';
 import { TickerData } from './binance/types.js';
+import { HealthManager, IntervalRefs } from './services/healthManager.js';
 
 class SignalSenseHunterWeb {
   private ws: BinanceWebSocket;
@@ -15,10 +16,13 @@ class SignalSenseHunterWeb {
   private soundAlert: SoundAlert;
   private storage: StorageManager;
   private sessionId: number = 0;
-  private updateInterval: NodeJS.Timeout | null = null;
-  private logInterval: NodeJS.Timeout | null = null;
-  private detectorInterval: NodeJS.Timeout | null = null;
+  private intervalRefs: IntervalRefs = {
+    updateInterval: null,
+    logInterval: null,
+    detectorInterval: null,
+  };
   private previousCriticalSymbols: Set<string> = new Set();
+  private healthManager: HealthManager | null = null;
 
   constructor() {
     this.dataStore = new DataStore();
@@ -61,6 +65,16 @@ class SignalSenseHunterWeb {
 
     process.on('SIGINT', () => this.shutdown());
     process.on('SIGTERM', () => this.shutdown());
+
+    process.on('uncaughtException', (error) => {
+      console.error('[FATAL] Uncaught exception:', error);
+      this.shutdown();
+    });
+
+    process.on('unhandledRejection', (reason) => {
+      console.error('[WARNING] Unhandled rejection:', reason);
+      // Log but don't crash - allow the app to continue
+    });
   }
 
   private handleTickers(tickers: TickerData[]): void {
@@ -115,18 +129,18 @@ class SignalSenseHunterWeb {
     this.ws.connect();
 
     // Update clients every second
-    this.updateInterval = setInterval(() => {
+    this.intervalRefs.updateInterval = setInterval(() => {
       this.webServer.emitUpdate();
       this.checkCriticalAlerts();
     }, config.ui.refreshMs);
 
     // Log opportunities every 10 seconds
-    this.logInterval = setInterval(() => {
+    this.intervalRefs.logInterval = setInterval(() => {
       this.logOpportunities();
     }, 10000);
 
     // Update advanced detectors every 30 seconds
-    this.detectorInterval = setInterval(async () => {
+    this.intervalRefs.detectorInterval = setInterval(async () => {
       try {
         await this.webServer.updateDetectors();
       } catch (error) {
@@ -144,20 +158,39 @@ class SignalSenseHunterWeb {
       }
     }, 5000);
 
+    // Initialize and start HealthManager
+    this.healthManager = new HealthManager(
+      this.storage,
+      this.dataStore,
+      this.ws,
+      {
+        connectionsPerIP: this.webServer.getConnectionsPerIP(),
+        socketMessageCounts: this.webServer.getSocketMessageCounts(),
+      },
+      this.intervalRefs,
+      this.webServer.getMLClient(),
+    );
+    this.webServer.setHealthManager(this.healthManager);
+    this.healthManager.start();
+
     console.log('Signal Sense Hunter Web started. Press Ctrl+C to stop.');
   }
 
   private async shutdown(): Promise<void> {
     console.log('\nShutting down Signal Sense Hunter Web...');
 
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
+    if (this.healthManager) {
+      this.healthManager.shutdown();
     }
-    if (this.logInterval) {
-      clearInterval(this.logInterval);
+
+    if (this.intervalRefs.updateInterval) {
+      clearInterval(this.intervalRefs.updateInterval);
     }
-    if (this.detectorInterval) {
-      clearInterval(this.detectorInterval);
+    if (this.intervalRefs.logInterval) {
+      clearInterval(this.intervalRefs.logInterval);
+    }
+    if (this.intervalRefs.detectorInterval) {
+      clearInterval(this.intervalRefs.detectorInterval);
     }
 
     if (this.sessionId) {
