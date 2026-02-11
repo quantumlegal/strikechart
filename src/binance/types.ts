@@ -165,4 +165,16 @@ export interface HealthReport {
     logInterval: boolean;
     detectorInterval: boolean;
   };
+  autoTraining?: {
+    completedSignals: number;
+    lastTrainingTime: number;
+    newSignalsSinceLastTrain: number;
+    triggered: boolean;
+    trainResult: any | null;
+  };
+  backup?: {
+    backedUp: boolean;
+    backupPath?: string;
+    backupCount?: number;
+  };
 }

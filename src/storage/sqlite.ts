@@ -746,6 +746,10 @@ export class StorageManager {
     };
   }
 
+  getDbPath(): string {
+    return this.dbPath;
+  }
+
   getDatabaseSizeBytes(): number {
     if (!this.db) return 0;
     const data = this.db.export();

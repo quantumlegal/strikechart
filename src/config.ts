@@ -67,6 +67,8 @@ export const config = {
     maxHeapMB: 512,
     wsWatchdogTimeoutMs: 60000,
     staleSymbolHours: 2,
+    backupIntervalCycles: Number(process.env.BACKUP_INTERVAL_CYCLES) || 72, // ~6h at 5min intervals
+    maxBackups: 5,
   },
 
   // Detector update intervals (staggered in production)
@@ -98,6 +100,16 @@ export const config = {
     filterThreshold: Number(process.env.ML_FILTER_THRESHOLD) || 0.40, // Filter signals below 40% win prob
     healthCheckInterval: 30000, // 30 seconds
     cacheTTL: 5000, // 5 second cache
+    autoTrainCooldownMs: 24 * 60 * 60 * 1000, // 24h between auto-trains
+    minNewSignalsForRetrain: 100,
+  },
+
+  // Telegram notifications
+  telegram: {
+    enabled: process.env.TELEGRAM_ENABLED === 'true',
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: process.env.TELEGRAM_CHAT_ID || '',
+    cooldownMs: Number(process.env.TELEGRAM_COOLDOWN_MS) || 300000,
   },
 
   // OMNIA Protocol Tracker configuration

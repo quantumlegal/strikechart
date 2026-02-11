@@ -115,6 +115,9 @@ export class WebServer {
   // OMNIA Protocol Tracker
   private omniaTracker: OmniaTracker;
 
+  // Signal deduplication
+  private recentlyRecordedSignals: Map<string, number> = new Map();
+
   // Health Manager reference
   private healthManagerRef: HealthManager | null = null;
 
@@ -807,8 +810,15 @@ export class WebServer {
     const longSignals = this.smartSignalEngine.getTopSignals(5, 'LONG');
     const shortSignals = this.smartSignalEngine.getTopSignals(5, 'SHORT');
     const topSignals = [...longSignals, ...shortSignals];
+    const now = Date.now();
     for (const signal of topSignals) {
       if (signal.confidence >= 60 && signal.direction !== 'NEUTRAL') {
+        // Signal deduplication: skip if same symbol+direction recorded within 5 min
+        const dedupKey = `${signal.symbol}-${signal.direction}`;
+        const lastRecorded = this.recentlyRecordedSignals.get(dedupKey) || 0;
+        if (now - lastRecorded < 300000) continue;
+        this.recentlyRecordedSignals.set(dedupKey, now);
+
         // Extract features for ML training data
         const features = this.featureExtractor
           ? this.featureExtractor.extractFeatures(signal, `sig_${Date.now()}_${signal.symbol}`)
@@ -822,6 +832,15 @@ export class WebServer {
           signal.confidence,
           features
         );
+      }
+    }
+
+    // Cleanup stale dedup entries (> 10 min old) when map grows large
+    if (this.recentlyRecordedSignals.size > 200) {
+      for (const [key, ts] of this.recentlyRecordedSignals) {
+        if (now - ts > 600000) {
+          this.recentlyRecordedSignals.delete(key);
+        }
       }
     }
   }

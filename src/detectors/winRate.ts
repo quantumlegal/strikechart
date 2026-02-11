@@ -14,6 +14,7 @@ export interface SignalRecord {
   pnlPercent?: number;
   features?: SignalFeatures; // ML features
   mlPrediction?: MLPrediction; // ML prediction result
+  priceSnapshots?: { price: number; timestamp: number }[];
 }
 
 export interface WinRateStats {
@@ -158,26 +159,64 @@ export class WinRateTracker {
 
     for (const [id, signal] of this.signals) {
       if (signal.outcome !== 'PENDING') continue;
-      if (now - signal.timestamp < this.evaluationTimeMs) continue;
 
-      // Get current price
+      // Get current price for snapshot capture
       const symbolData = this.dataStore.getSymbol(signal.symbol);
       if (!symbolData) continue;
 
       const currentPrice = symbolData.current.lastPrice;
-      const pnlPercent = signal.direction === 'LONG'
+
+      // Capture price snapshot for MFE/MAE tracking (max 50 per signal)
+      if (!signal.priceSnapshots) signal.priceSnapshots = [];
+      if (signal.priceSnapshots.length < 50) {
+        signal.priceSnapshots.push({ price: currentPrice, timestamp: now });
+      }
+
+      // Not ready to evaluate yet
+      if (now - signal.timestamp < this.evaluationTimeMs) continue;
+
+      // Calculate MFE (Max Favorable Excursion) and MAE (Max Adverse Excursion) from snapshots
+      let mfe = 0;
+      let mae = 0;
+
+      if (signal.priceSnapshots.length > 0) {
+        for (const snap of signal.priceSnapshots) {
+          const excursion = signal.direction === 'LONG'
+            ? ((snap.price - signal.entryPrice) / signal.entryPrice) * 100
+            : ((signal.entryPrice - snap.price) / signal.entryPrice) * 100;
+
+          if (excursion > mfe) mfe = excursion;
+          if (excursion < mae) mae = excursion;
+        }
+      }
+
+      // Final price PnL
+      const finalPnl = signal.direction === 'LONG'
         ? ((currentPrice - signal.entryPrice) / signal.entryPrice) * 100
         : ((signal.entryPrice - currentPrice) / signal.entryPrice) * 100;
 
-      // Determine outcome: > 0.5% profit = WIN, < -0.5% = LOSS, otherwise neutral
+      // Determine outcome using MFE/MAE simulated TP/SL
       let outcome: 'WIN' | 'LOSS';
-      if (pnlPercent > 0.5) {
+      let pnlPercent: number;
+
+      if (mfe >= 1.5) {
+        // Simulated take-profit hit
         outcome = 'WIN';
-      } else if (pnlPercent < -0.5) {
+        pnlPercent = 1.5;
+      } else if (mae <= -2.0 && mfe < 1.5) {
+        // Simulated stop-loss hit (and TP never reached)
         outcome = 'LOSS';
+        pnlPercent = -2.0;
       } else {
-        // Small move, count as win if in right direction
-        outcome = pnlPercent >= 0 ? 'WIN' : 'LOSS';
+        // Neither TP nor SL hit - use final price with 0.5% threshold
+        if (finalPnl > 0.5) {
+          outcome = 'WIN';
+        } else if (finalPnl < -0.5) {
+          outcome = 'LOSS';
+        } else {
+          outcome = finalPnl >= 0 ? 'WIN' : 'LOSS';
+        }
+        pnlPercent = finalPnl;
       }
 
       signal.outcome = outcome;

@@ -7,6 +7,7 @@ import { SoundAlert } from './alerts/sound.js';
 import { StorageManager } from './storage/sqlite.js';
 import { TickerData } from './binance/types.js';
 import { HealthManager, IntervalRefs } from './services/healthManager.js';
+import { TelegramNotifier } from './services/telegramNotifier.js';
 
 class SignalSenseHunterWeb {
   private ws: BinanceWebSocket;
@@ -21,8 +22,9 @@ class SignalSenseHunterWeb {
     logInterval: null,
     detectorInterval: null,
   };
-  private previousCriticalSymbols: Set<string> = new Set();
+  private criticalAlertCooldowns: Map<string, number> = new Map();
   private healthManager: HealthManager | null = null;
+  private telegramNotifier: TelegramNotifier;
 
   constructor() {
     this.dataStore = new DataStore();
@@ -30,6 +32,7 @@ class SignalSenseHunterWeb {
     this.soundAlert = new SoundAlert();
     this.storage = new StorageManager();
     this.ws = new BinanceWebSocket();
+    this.telegramNotifier = new TelegramNotifier();
 
     const port = parseInt(process.env.PORT || '3000', 10);
     this.webServer = new WebServer(this.dataStore, this.opportunityRanker, port);
@@ -93,21 +96,38 @@ class SignalSenseHunterWeb {
 
   private checkCriticalAlerts(): void {
     const criticalAlerts = this.opportunityRanker.getVolatilityDetector().getCritical();
+    const now = Date.now();
 
     for (const alert of criticalAlerts) {
-      if (!this.previousCriticalSymbols.has(alert.symbol)) {
-        console.log(`Critical alert: ${alert.symbol} ${alert.change24h.toFixed(2)}%`);
-        this.soundAlert.playHigh(alert.symbol);
-        this.storage.logAlert(
-          alert.symbol,
-          'CRITICAL_VOLATILITY',
-          `Critical move: ${alert.change24h.toFixed(2)}%`,
-          'high'
-        );
-      }
+      const lastAlerted = this.criticalAlertCooldowns.get(alert.symbol) || 0;
+      if (now - lastAlerted < 900000) continue; // 15 min cooldown per symbol
+
+      console.log(`Critical alert: ${alert.symbol} ${alert.change24h.toFixed(2)}%`);
+      this.soundAlert.playHigh(alert.symbol);
+      this.storage.logAlert(
+        alert.symbol,
+        'CRITICAL_VOLATILITY',
+        `Critical move: ${alert.change24h.toFixed(2)}%`,
+        'high'
+      );
+      this.criticalAlertCooldowns.set(alert.symbol, now);
+
+      // Send Telegram notification if enabled
+      this.telegramNotifier.sendAlert(
+        alert.symbol,
+        'CRITICAL_VOLATILITY',
+        `Critical move: ${alert.change24h.toFixed(2)}% | Direction: ${alert.direction} | Price: $${alert.lastPrice}`
+      );
     }
 
-    this.previousCriticalSymbols = new Set(criticalAlerts.map(a => a.symbol));
+    // Clean stale cooldown entries (> 1h old)
+    if (this.criticalAlertCooldowns.size > 50) {
+      for (const [symbol, ts] of this.criticalAlertCooldowns) {
+        if (now - ts > 3600000) {
+          this.criticalAlertCooldowns.delete(symbol);
+        }
+      }
+    }
   }
 
   private logOpportunities(): void {
@@ -172,6 +192,7 @@ class SignalSenseHunterWeb {
       },
       this.intervalRefs,
       this.webServer.getMLClient(),
+      this.telegramNotifier,
     );
     this.webServer.setHealthManager(this.healthManager);
     this.healthManager.start();
