@@ -124,6 +124,9 @@ class SignalSenseHunterWeb {
 
     this.sessionId = this.storage.startSession();
 
+    // Initialize ML integration (must happen after storage.init())
+    await this.webServer.initializeML(this.storage);
+
     await this.webServer.start();
 
     this.ws.connect();
