@@ -803,16 +803,24 @@ export class WebServer {
     // Update smart signal engine after other detectors
     await this.smartSignalEngine.analyze();
 
-    // Record high-confidence signals for win rate tracking
-    const topSignals = this.smartSignalEngine.getTopSignals(5, 'LONG');
+    // Record high-confidence signals for win rate tracking (both directions)
+    const longSignals = this.smartSignalEngine.getTopSignals(5, 'LONG');
+    const shortSignals = this.smartSignalEngine.getTopSignals(5, 'SHORT');
+    const topSignals = [...longSignals, ...shortSignals];
     for (const signal of topSignals) {
-      if (signal.confidence >= 60 && (signal.direction === 'LONG' || signal.direction === 'SHORT')) {
+      if (signal.confidence >= 60 && signal.direction !== 'NEUTRAL') {
+        // Extract features for ML training data
+        const features = this.featureExtractor
+          ? this.featureExtractor.extractFeatures(signal, `sig_${Date.now()}_${signal.symbol}`)
+          : undefined;
+
         this.winRateTracker.recordSignal(
           signal.symbol,
           signal.entryType,
           signal.direction,
           signal.price,
-          signal.confidence
+          signal.confidence,
+          features
         );
       }
     }
