@@ -64,6 +64,15 @@ export interface SignalFeatures {
   btc_correlation: number;
   btc_outperformance: number;
 
+  // Direction prediction v2 features
+  velocity_exhaustion: number;     // 0=trending, 1=weakening, 2=reversal
+  recency_weighted_change: number; // Weighted composite of recent changes (%)
+  volume_recent_price_change: number; // Price change during spike window (%)
+  rsi_15m: number;                 // 15-minute RSI (0-100)
+  rsi_4h: number;                  // 4-hour RSI (0-100)
+  rsi_divergence: number;          // Cross-TF RSI divergence (-1/0/1)
+  market_volatility: number;       // Market-wide avg abs 24h change (%)
+
   // Direction
   direction: number; // 1 = LONG, -1 = SHORT
 }
@@ -273,6 +282,24 @@ export class StorageManager {
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_signal_features_timestamp ON signal_features(timestamp)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_signal_features_outcome ON signal_features(outcome)`);
 
+    // Add new direction prediction v2 columns to existing databases
+    const newColumns = [
+      { name: 'velocity_exhaustion', def: 'INTEGER DEFAULT 0' },
+      { name: 'recency_weighted_change', def: 'REAL DEFAULT 0' },
+      { name: 'volume_recent_price_change', def: 'REAL DEFAULT 0' },
+      { name: 'rsi_15m', def: 'REAL DEFAULT 50' },
+      { name: 'rsi_4h', def: 'REAL DEFAULT 50' },
+      { name: 'rsi_divergence', def: 'INTEGER DEFAULT 0' },
+      { name: 'market_volatility', def: 'REAL DEFAULT 0' },
+    ];
+    for (const col of newColumns) {
+      try {
+        this.db.run(`ALTER TABLE signal_features ADD COLUMN ${col.name} ${col.def}`);
+      } catch {
+        // Column already exists — ignore
+      }
+    }
+
     // Create ml_model_metrics table for tracking model performance
     this.db.run(`
       CREATE TABLE IF NOT EXISTS ml_model_metrics (
@@ -466,8 +493,10 @@ export class StorageManager {
         smart_confidence, component_count, entry_type, risk_level,
         atr_percent, vwap_distance, risk_reward_ratio,
         whale_activity, btc_correlation, btc_outperformance,
+        velocity_exhaustion, recency_weighted_change, volume_recent_price_change,
+        rsi_15m, rsi_4h, rsi_divergence, market_volatility,
         direction
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         features.signal_id,
         features.symbol,
@@ -506,6 +535,13 @@ export class StorageManager {
         features.whale_activity,
         features.btc_correlation,
         features.btc_outperformance,
+        features.velocity_exhaustion,
+        features.recency_weighted_change,
+        features.volume_recent_price_change,
+        features.rsi_15m,
+        features.rsi_4h,
+        features.rsi_divergence,
+        features.market_volatility,
         features.direction,
       ]
     );

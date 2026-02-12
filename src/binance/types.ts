@@ -73,6 +73,7 @@ export interface VolumeAlert {
   averageVolume: number;
   multiplier: number;
   priceChange: number;
+  recentPriceChange: number; // Price change during spike window (last ~10 snapshots)
   timestamp: number;
 }
 

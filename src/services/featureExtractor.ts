@@ -62,6 +62,9 @@ export class FeatureExtractor {
     // Whale/Correlation features
     const whaleCorrelationFeatures = this.extractWhaleCorrelationFeatures(symbol);
 
+    // New direction prediction features (v2)
+    const directionFeatures = this.extractDirectionFeatures(symbol, signal);
+
     return {
       signal_id: signalId,
       symbol,
@@ -76,6 +79,7 @@ export class FeatureExtractor {
       ...smartFeatures,
       ...entryFeatures,
       ...whaleCorrelationFeatures,
+      ...directionFeatures,
       direction: signal.direction === 'LONG' ? 1 : -1,
     };
   }
@@ -438,6 +442,86 @@ export class FeatureExtractor {
     };
   }
 
+  private extractDirectionFeatures(symbol: string, signal: SmartSignal): {
+    velocity_exhaustion: number;
+    recency_weighted_change: number;
+    volume_recent_price_change: number;
+    rsi_15m: number;
+    rsi_4h: number;
+    rsi_divergence: number;
+    market_volatility: number;
+  } {
+    // Velocity exhaustion state (0=trending, 1=weakening, 2=reversal)
+    let velocityExhaustion = 0;
+    const velocities = this.velocityDetector.getTopVelocity(100);
+    const velocityData = velocities.find(v => v.symbol === symbol);
+    if (velocityData) {
+      const absV = Math.abs(velocityData.velocity);
+      if (absV > 2.0 && velocityData.acceleration < -0.3) {
+        velocityExhaustion = 2; // reversal
+      } else if (absV > 1.0 && velocityData.trend === 'Decelerating') {
+        velocityExhaustion = 1; // weakening
+      }
+    }
+
+    // Recency-weighted price change
+    const priceHistory = this.dataStore.getPriceHistory(symbol);
+    const ticker = this.dataStore.getSymbol(symbol)?.current;
+    let recencyWeightedChange = ticker?.priceChangePercent || 0;
+    if (priceHistory.length >= 5 && ticker) {
+      const now = Date.now();
+      const currentPrice = priceHistory[priceHistory.length - 1].price;
+      const getPriceAgo = (ms: number): number | null => {
+        const target = now - ms;
+        let closest = priceHistory[0];
+        let minDiff = Math.abs(priceHistory[0].timestamp - target);
+        for (const pt of priceHistory) {
+          const diff = Math.abs(pt.timestamp - target);
+          if (diff < minDiff) { minDiff = diff; closest = pt; }
+        }
+        return minDiff < 5 * 60 * 1000 ? closest.price : null;
+      };
+      const p5 = getPriceAgo(5 * 60 * 1000);
+      const p15 = getPriceAgo(15 * 60 * 1000);
+      const p60 = getPriceAgo(60 * 60 * 1000);
+      const c5 = p5 && p5 > 0 ? ((currentPrice - p5) / p5) * 100 : 0;
+      const c15 = p15 && p15 > 0 ? ((currentPrice - p15) / p15) * 100 : 0;
+      const c60 = p60 && p60 > 0 ? ((currentPrice - p60) / p60) * 100 : 0;
+      recencyWeightedChange = c5 * 0.35 + c15 * 0.30 + c60 * 0.20 + ticker.priceChangePercent * 0.15;
+    }
+
+    // Volume recent price change
+    const volumeSpikes = this.volumeDetector.getTopSpikes(100);
+    const spike = volumeSpikes.find(v => v.symbol === symbol);
+    const volumeRecentPriceChange = spike?.recentPriceChange || 0;
+
+    // Multi-TF RSI
+    const mtfData = this.mtfDetector.getSymbol(symbol);
+    const rsi15m = mtfData?.rsi15m ?? 50;
+    const rsi4h = mtfData?.rsi4h ?? 50;
+    let rsiDivergence = 0;
+    if (mtfData?.rsiDivergence === 'BULLISH_RSI_DIV') rsiDivergence = 1;
+    else if (mtfData?.rsiDivergence === 'BEARISH_RSI_DIV') rsiDivergence = -1;
+
+    // Market-wide volatility
+    const allSymbols = this.dataStore.getAllSymbols();
+    let totalAbsChange = 0;
+    for (const sym of allSymbols) {
+      totalAbsChange += Math.abs(sym.current.priceChangePercent);
+    }
+    const marketVolatility = allSymbols.length > 0 ? totalAbsChange / allSymbols.length : 0;
+
+    return {
+      velocity_exhaustion: velocityExhaustion,
+      recency_weighted_change: recencyWeightedChange,
+      volume_recent_price_change: volumeRecentPriceChange,
+      rsi_15m: rsi15m,
+      rsi_4h: rsi4h,
+      rsi_divergence: rsiDivergence,
+      market_volatility: marketVolatility,
+    };
+  }
+
   // Helper to get price at a specific time from history
   private getPriceAtTime(history: Array<{ price: number; timestamp: number }>, targetTime: number): number | null {
     if (history.length === 0) return null;
@@ -497,6 +581,13 @@ export class FeatureExtractor {
       'whale_activity',
       'btc_correlation',
       'btc_outperformance',
+      'velocity_exhaustion',
+      'recency_weighted_change',
+      'volume_recent_price_change',
+      'rsi_15m',
+      'rsi_4h',
+      'rsi_divergence',
+      'market_volatility',
       'direction',
     ];
   }
@@ -538,6 +629,13 @@ export class FeatureExtractor {
       features.whale_activity,
       features.btc_correlation,
       features.btc_outperformance,
+      features.velocity_exhaustion,
+      features.recency_weighted_change,
+      features.volume_recent_price_change,
+      features.rsi_15m,
+      features.rsi_4h,
+      features.rsi_divergence,
+      features.market_volatility,
       features.direction,
     ];
   }

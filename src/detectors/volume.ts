@@ -70,12 +70,25 @@ export class VolumeDetector {
       if (totalVolume < 1000000) continue; // Min $1M volume
 
       if (multiplier >= config.volume.spikeMultiplier) {
+        // Calculate recent price change during the spike window
+        const priceHistory = this.dataStore.getPriceHistory(symbol);
+        let recentPriceChange = 0;
+        if (priceHistory.length >= 10) {
+          const recentSlice = priceHistory.slice(-10);
+          const startPrice = recentSlice[0].price;
+          const endPrice = recentSlice[recentSlice.length - 1].price;
+          if (startPrice > 0) {
+            recentPriceChange = ((endPrice - startPrice) / startPrice) * 100;
+          }
+        }
+
         alerts.push({
           symbol: symbolData.symbol,
           currentVolume: totalVolume,
           averageVolume: avgRate * 60, // Extrapolate to per-minute
           multiplier,
           priceChange: symbolData.current.priceChangePercent,
+          recentPriceChange,
           timestamp: Date.now(),
         });
       }

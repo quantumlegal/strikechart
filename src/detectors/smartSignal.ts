@@ -189,7 +189,7 @@ export class SmartSignalEngine {
     if (priceSignal) {
       signals.push(priceSignal);
       if (priceSignal.strength > 50) {
-        reasoning.push(`Price ${priceSignal.direction === 'BULLISH' ? 'up' : 'down'} ${ticker.priceChangePercent.toFixed(1)}% in 24h`);
+        reasoning.push(`Price momentum ${priceSignal.direction === 'BULLISH' ? 'bullish' : 'bearish'} (24h: ${ticker.priceChangePercent.toFixed(1)}%)`);
       }
     }
 
@@ -267,15 +267,45 @@ export class SmartSignalEngine {
     const ticker = this.dataStore.getSymbol(symbol)?.current;
     if (!ticker) return null;
 
-    const change = ticker.priceChangePercent;
-    const absChange = Math.abs(change);
+    const priceHistory = this.dataStore.getPriceHistory(symbol);
+    const now = Date.now();
+    let weightedChange = ticker.priceChangePercent; // fallback to 24h
 
+    if (priceHistory.length >= 5) {
+      const currentPrice = priceHistory[priceHistory.length - 1].price;
+
+      // Helper to get price at a relative time offset
+      const getPriceAgo = (ms: number): number | null => {
+        const target = now - ms;
+        let closest = priceHistory[0];
+        let minDiff = Math.abs(priceHistory[0].timestamp - target);
+        for (const pt of priceHistory) {
+          const diff = Math.abs(pt.timestamp - target);
+          if (diff < minDiff) { minDiff = diff; closest = pt; }
+        }
+        return minDiff < 5 * 60 * 1000 ? closest.price : null;
+      };
+
+      const price5m = getPriceAgo(5 * 60 * 1000);
+      const price15m = getPriceAgo(15 * 60 * 1000);
+      const price1h = getPriceAgo(60 * 60 * 1000);
+
+      const chg5m = price5m && price5m > 0 ? ((currentPrice - price5m) / price5m) * 100 : 0;
+      const chg15m = price15m && price15m > 0 ? ((currentPrice - price15m) / price15m) * 100 : 0;
+      const chg1h = price1h && price1h > 0 ? ((currentPrice - price1h) / price1h) * 100 : 0;
+      const chg24h = ticker.priceChangePercent;
+
+      // Recency-weighted composite: recent data gets highest weight
+      weightedChange = chg5m * 0.35 + chg15m * 0.30 + chg1h * 0.20 + chg24h * 0.15;
+    }
+
+    const absChange = Math.abs(weightedChange);
     // Scale: 5% = 50 strength, 10% = 75, 20%+ = 100
     const strength = Math.min(100, absChange * 5);
 
     return {
       name: 'Price Movement',
-      direction: change > 0 ? 'BULLISH' : change < 0 ? 'BEARISH' : 'NEUTRAL',
+      direction: weightedChange > 0.1 ? 'BULLISH' : weightedChange < -0.1 ? 'BEARISH' : 'NEUTRAL',
       strength,
       weight: 20,
     };
@@ -296,11 +326,29 @@ export class SmartSignalEngine {
 
     // Volume ratio: 2x = 50, 3x = 70, 5x+ = 100
     const strength = Math.min(100, spike.multiplier * 20);
-    const ticker = this.dataStore.getSymbol(symbol)?.current;
+
+    // Use recent price change during spike window for direction, not stale 24h data
+    const recent = spike.recentPriceChange;
+    const change24h = spike.priceChange;
+    let direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+
+    if (Math.abs(recent) < 0.05) {
+      // No clear recent movement during spike — ambiguous
+      direction = 'NEUTRAL';
+    } else if (recent > 0 && change24h < -3) {
+      // Buying during a downtrend — counter-trend reversal signal
+      direction = 'BULLISH';
+    } else if (recent < 0 && change24h > 3) {
+      // Selling during an uptrend — counter-trend reversal signal
+      direction = 'BEARISH';
+    } else {
+      // Follow the recent direction
+      direction = recent > 0 ? 'BULLISH' : 'BEARISH';
+    }
 
     return {
       name: 'Volume',
-      direction: ticker && ticker.priceChangePercent > 0 ? 'BULLISH' : 'BEARISH',
+      direction,
       strength,
       weight: 15,
     };
@@ -319,12 +367,27 @@ export class SmartSignalEngine {
       };
     }
 
+    const absVelocity = Math.abs(velocity.velocity);
     // Velocity: 0.5%/min = 50, 1%/min = 75, 2%/min = 100
-    const strength = Math.min(100, Math.abs(velocity.velocity) * 50);
+    const strength = Math.min(100, absVelocity * 50);
+
+    let direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+
+    // Exhaustion reversal: extreme velocity AND decelerating hard
+    if (absVelocity > 2.0 && velocity.acceleration < -0.3) {
+      // Flip direction — exhaustion reversal signal
+      direction = velocity.velocity > 0 ? 'BEARISH' : 'BULLISH';
+    } else if (absVelocity > 1.0 && velocity.trend === 'Decelerating') {
+      // Weakening trend — go neutral
+      direction = 'NEUTRAL';
+    } else {
+      // Normal trend-following
+      direction = velocity.velocity > 0 ? 'BULLISH' : 'BEARISH';
+    }
 
     return {
       name: 'Velocity',
-      direction: velocity.velocity > 0 ? 'BULLISH' : 'BEARISH',
+      direction,
       strength,
       weight: 20,
     };
@@ -417,8 +480,19 @@ export class SmartSignalEngine {
         break;
     }
 
-    // Boost for divergence (potential reversal)
-    if (mtfData.divergence !== 'NONE') {
+    // RSI divergence takes highest priority — override alignment direction
+    if (mtfData.rsiDivergence === 'BULLISH_RSI_DIV') {
+      direction = 'BULLISH';
+      strength = Math.min(100, strength + 25);
+    } else if (mtfData.rsiDivergence === 'BEARISH_RSI_DIV') {
+      direction = 'BEARISH';
+      strength = Math.min(100, strength + 25);
+    } else if (mtfData.divergence === 'BULLISH_DIV') {
+      // BUG FIX: divergence should flip/override direction, not just boost
+      direction = 'BULLISH';
+      strength = Math.min(100, strength + 20);
+    } else if (mtfData.divergence === 'BEARISH_DIV') {
+      direction = 'BEARISH';
       strength = Math.min(100, strength + 20);
     }
 
@@ -428,6 +502,32 @@ export class SmartSignalEngine {
       strength,
       weight: 20,
     };
+  }
+
+  // Cached adaptive threshold per analysis cycle
+  private cachedVolatilityThreshold: number = 10;
+  private lastThresholdUpdate: number = 0;
+
+  private getAdaptiveThreshold(): number {
+    const now = Date.now();
+    // Cache for 60 seconds (one analysis cycle)
+    if (now - this.lastThresholdUpdate < 60_000) {
+      return this.cachedVolatilityThreshold;
+    }
+
+    const allSymbols = this.dataStore.getAllSymbols();
+    if (allSymbols.length === 0) return 10;
+
+    let totalAbsChange = 0;
+    for (const sym of allSymbols) {
+      totalAbsChange += Math.abs(sym.current.priceChangePercent);
+    }
+    const avgAbsChange = totalAbsChange / allSymbols.length;
+
+    // Formula: clamp(avgAbsChange * 1.5 + 2, 5, 20)
+    this.cachedVolatilityThreshold = Math.max(5, Math.min(20, avgAbsChange * 1.5 + 2));
+    this.lastThresholdUpdate = now;
+    return this.cachedVolatilityThreshold;
   }
 
   private calculateConfluence(signals: SignalComponent[]): {
@@ -463,9 +563,11 @@ export class SmartSignalEngine {
     const alignmentBonus = (alignedSignals / signals.length) * 20;
     const confidence = Math.min(100, confluenceScore + alignmentBonus);
 
+    // Adaptive direction threshold based on market-wide volatility
+    const threshold = this.getAdaptiveThreshold();
     let direction: 'LONG' | 'SHORT' | 'NEUTRAL' = 'NEUTRAL';
-    if (netScore > 10) direction = 'LONG';
-    else if (netScore < -10) direction = 'SHORT';
+    if (netScore > threshold) direction = 'LONG';
+    else if (netScore < -threshold) direction = 'SHORT';
 
     return { direction, confluenceScore, confidence };
   }

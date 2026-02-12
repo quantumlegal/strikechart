@@ -8,6 +8,9 @@ export interface MTFAlert {
   change4h: number;
   change24h: number;
   rsi1h: number;
+  rsi15m: number;
+  rsi4h: number;
+  rsiDivergence: 'BULLISH_RSI_DIV' | 'BEARISH_RSI_DIV' | 'NONE';
   alignment: 'STRONG_BULLISH' | 'BULLISH' | 'MIXED' | 'BEARISH' | 'STRONG_BEARISH';
   divergence: 'BULLISH_DIV' | 'BEARISH_DIV' | 'NONE';
   momentum: 'ACCELERATING' | 'DECELERATING' | 'STEADY';
@@ -42,9 +45,11 @@ export class MultiTimeframeDetector {
     for (const symbol of batch) {
       try {
         const changes = await getMultiTimeframeChanges(symbol);
-        const rsi = await getSymbolRSI(symbol, '1h');
+        const rsi1h = await getSymbolRSI(symbol, '1h');
+        const rsi15m = await getSymbolRSI(symbol, '15m');
+        const rsi4h = await getSymbolRSI(symbol, '4h');
 
-        const alert = this.analyzeSymbol(symbol, changes, rsi);
+        const alert = this.analyzeSymbol(symbol, changes, rsi1h, rsi15m, rsi4h);
         this.mtfData.set(symbol, alert);
       } catch (error) {
         // Skip failed symbols
@@ -57,7 +62,9 @@ export class MultiTimeframeDetector {
   private analyzeSymbol(
     symbol: string,
     changes: { change15m: number; change1h: number; change4h: number; change24h: number },
-    rsi: number
+    rsi1h: number,
+    rsi15m: number = 50,
+    rsi4h: number = 50
   ): MTFAlert {
     const { change15m, change1h, change4h, change24h } = changes;
 
@@ -81,6 +88,18 @@ export class MultiTimeframeDetector {
       divergence = 'BULLISH_DIV'; // Short-term dip, long-term up = potential bounce
     }
 
+    // Cross-TF RSI divergence detection
+    let rsiDivergence: MTFAlert['rsiDivergence'] = 'NONE';
+    if (rsi15m > 70 && rsi4h < rsi1h && change4h < 0) {
+      rsiDivergence = 'BEARISH_RSI_DIV'; // Short-term overbought, longer TFs weakening
+    } else if (rsi15m < 30 && rsi4h > rsi1h && change4h > 0) {
+      rsiDivergence = 'BULLISH_RSI_DIV'; // Short-term oversold, longer TFs rising
+    } else if (rsi15m < 25 && rsi4h > 50) {
+      rsiDivergence = 'BULLISH_RSI_DIV'; // Short-term panic in an uptrend
+    } else if (rsi15m > 75 && rsi4h < 50) {
+      rsiDivergence = 'BEARISH_RSI_DIV'; // Euphoria in a downtrend
+    }
+
     // Momentum (comparing timeframes)
     let momentum: MTFAlert['momentum'] = 'STEADY';
     if (Math.abs(change15m) > Math.abs(change1h) && Math.abs(change1h) > Math.abs(change4h)) {
@@ -95,7 +114,10 @@ export class MultiTimeframeDetector {
       change1h,
       change4h,
       change24h,
-      rsi1h: rsi,
+      rsi1h,
+      rsi15m,
+      rsi4h,
+      rsiDivergence,
       alignment,
       divergence,
       momentum,
